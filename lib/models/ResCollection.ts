@@ -54,6 +54,10 @@ export default class ResCollection<V = unknown> {
 
         if (this._idCallback) {
             const id = String(this._idCallback(item));
+            if (["", "undefined", "null"].includes(id) || id.replaceAll(/\W/g, "") === "") {
+                console.debug(item);
+                throw new Error("No id for item");
+            }
             if (this._map![id]) {
                 throw new Error(`Duplicate id - ${id}`);
             }
@@ -141,6 +145,9 @@ export default class ResCollection<V = unknown> {
             this._map = {};
             for (const v of this._list) {
                 const id = String(this._idCallback(v));
+                if (["", "undefined", "null"].includes(id) || id.replaceAll(/\W/g, "") === "") {
+                    throw new Error("No id for item");
+                }
                 if (this._map[id]) {
                     throw new Error(`Duplicate id - ${id}`);
                 }

@@ -19,10 +19,14 @@ export const ACTION_DELETE = {
     action: "delete"
 } as const;
 
-export const COLLECTION_TYPE = "collection";
-export const ERROR_TYPE = "error";
 export const MODEL_TYPE = "model";
-export const RESOURCE_TYPES = [COLLECTION_TYPE, ERROR_TYPE, MODEL_TYPE] as const;
+export const ERROR_TYPE = "error";
+export const COLLECTION_TYPE = "collection";
+
+// the order matters here, this is the order in which resources will be
+// created, initialized, and then syncronized in
+// for ids to work in collections, models MUST be before collections
+export const RESOURCE_TYPES = [MODEL_TYPE, ERROR_TYPE, COLLECTION_TYPE] as const;
 export type ResourceType = typeof RESOURCE_TYPES[number];
 
 export const RECONNECT_DELAY = 3000;
