@@ -1,0 +1,8 @@
+{
+  "extends": "@uwu-codes/tsconfig/esm",
+  "compilerOptions": {
+    "module": "ESNext"
+  },
+  "include": ["lib/**/*", "test/**/*", "jest.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
