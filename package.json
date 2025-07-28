@@ -1,6 +1,6 @@
 {
   "name": "resclient-ts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A RES client written in typescript.",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.js",
