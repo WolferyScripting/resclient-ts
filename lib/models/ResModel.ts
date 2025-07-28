@@ -6,12 +6,12 @@ import { type AnyFunction, type AnyObject } from "../util/types.js";
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
 }
-export default class ResModel<C extends ResClient = ResClient> {
+export default class ResModel {
     protected _definition?: Record<string, PropertyDefinition>;
     protected _props!: AnyObject;
-    protected api!: C;
+    protected api!: ResClient;
     rid!: string;
-    constructor(api: C, rid: string, options?: ResModelOptions) {
+    constructor(api: ResClient, rid: string, options?: ResModelOptions) {
         update(this, options ?? {}, {
             definition: { type: "?object", property: "_definition" }
         });
@@ -23,7 +23,7 @@ export default class ResModel<C extends ResClient = ResClient> {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected _shouldPromoteKey(key: string, value: unknown): true {
+    protected _shouldPromoteKey(key: string, value: unknown): boolean {
         return true;
     }
 
@@ -35,7 +35,7 @@ export default class ResModel<C extends ResClient = ResClient> {
         return this.api.call<T>(this.rid, method, params);
     }
 
-    getClient(): C {
+    getClient(): ResClient {
         return this.api;
     }
 

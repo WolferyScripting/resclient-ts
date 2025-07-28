@@ -12,3 +12,4 @@ export type * from "./util/resgate.js";
 export * from "./Constants.js";
 export { default as eventBus, EventBus } from "./includes/eventbus/index.js";
 export * from "./includes/utils/obj.js";
+export { default as lcsDiff } from "./util/lcs-diff.js";

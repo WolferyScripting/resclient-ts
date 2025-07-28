@@ -5,7 +5,6 @@ import ResError from "./ResError.js";
 import ResModel from "./ResModel.js";
 import ResRef from "./ResRef.js";
 import eventBus, { type EventBus } from "../includes/eventbus/index.js";
-import { equal } from "../includes/utils/obj.js";
 import {
     ACTION_DELETE,
     COLLECTION_TYPE,
@@ -35,16 +34,17 @@ import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
 import { type AnyFunction, type AnyObject } from "../util/types.js";
+import lcsDiff from "../util/lcs-diff.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
 
-export type OnConnectFunction<C extends ResClient> = (api: C) => unknown;
-export type OnConnectErrorFunction<C extends ResClient> = (api: C, err: unknown) => unknown;
-export interface ClientOptions<C extends ResClient> {
+export type OnConnectFunction = (api: ResClient) => unknown;
+export type OnConnectErrorFunction = (api: ResClient, err: unknown) => unknown;
+export interface ClientOptions {
     eventBus?: EventBus;
     namespace?: string;
-    onConnect?: OnConnectFunction<C>;
-    onConnectError?: OnConnectErrorFunction<C>;
+    onConnect?: OnConnectFunction;
+    onConnectError?: OnConnectErrorFunction;
 }
 
 export interface Request {
@@ -80,8 +80,8 @@ export default class ResClient {
     connected = false;
     eventBus = eventBus;
     namespace = "resclient";
-    onConnect: OnConnectFunction<this> | null = null;
-    onConnectError: OnConnectErrorFunction<this> | null = null;
+    onConnect: OnConnectFunction | null = null;
+    onConnectError: OnConnectErrorFunction | null = null;
     protocol!: number;
     requestID = 1;
     requests: Record<number, Request> = {};
@@ -126,7 +126,7 @@ export default class ResClient {
     };
     ws: WebSocket | null = null;
     wsFactory: (() => WebSocket);
-    constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions<ResClient> = {}) {
+    constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions = {}) {
         this.eventBus = options.eventBus || this.eventBus;
         if (options.eventBus !== undefined) {
             this.eventBus = options.eventBus;
@@ -620,96 +620,9 @@ export default class ResClient {
             });
     }
 
-    // this is copied word-for-word as I cannot wrap my brain around this mess of code
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
-    private _patchDiff(a: Array<any>, b: Array<any>, onKeep: AnyFunction, onAdd: AnyFunction, onRemove: AnyFunction): void {
-        // Do a LCS matric calculation
-        // https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
-        let t, i, j, s = 0, aa, bb, m = a.length, n = b.length;
-
-        // Trim of matches at the start and end
-        while (s < m && s < n && equal(a[s], b[s])) {
-            s++;
-        }
-        if (s === m && s === n) {
-            return;
-        }
-        while (s < m && s < n && equal(a[m - 1], b[n - 1])) {
-            m--;
-            n--;
-        }
-
-        if (s > 0 || m < a.length) {
-            aa = a.slice(s, m);
-            m = aa.length;
-        } else {
-            aa = a;
-        }
-        if (s > 0 || n < b.length) {
-            bb = b.slice(s, n);
-            n = bb.length;
-        } else {
-            bb = b;
-        }
-
-        // Create matrix and initialize it
-        const c: Array<any> = Array.from({ length: m + 1 });
-        for (i = 0; i <= m; i++) {
-            c[i] = t = Array.from({ length: n + 1 });
-            t[0] = 0;
-        }
-        t = c[0];
-        for (j = 1; j <= n; j++) {
-            t[j] = 0;
-        }
-
-        for (i = 0; i < m; i++) {
-            for (j = 0; j < n; j++) {
-                c[i + 1][j + 1] = equal(aa[i], bb[j])
-                    ? c[i][j] + 1
-                    : Math.max(c[i + 1][j], c[i][j + 1]);
-            }
-        }
-
-        for (i = a.length - 1; i >= s + m; i--) {
-            onKeep(a[i], i, i - m + n, i);
-        }
-        let idx = m + s;
-        i = m;
-        j = n;
-        let r = 0;
-        const adds = [];
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            m = i - 1;
-            n = j - 1;
-            if (i > 0 && j > 0 && equal(aa[m], bb[n])) {
-                onKeep(aa[m], m + s, n + s, --idx);
-                i--;
-                j--;
-            } else if (j > 0 && (i === 0 || c[i][n] >= c[m][j])) {
-                adds.push([ n, idx, r ]);
-                j--;
-            } else if (i > 0 && (j === 0 || c[i][n] < c[m][j])) {
-                onRemove(aa[m], m + s, --idx);
-                r++;
-                i--;
-            } else {
-                break;
-            }
-        }
-        for (i = s - 1; i >= 0; i--) {
-            onKeep(a[i], i, i, i);
-        }
-
-        // Do the adds
-        const len = adds.length - 1;
-        for (i = len; i >= 0; i--) {
-            [ n, idx, j ] = adds[i]! as [number, number, number];
-            onAdd(bb[n], n + s, idx - r + j + len - i);
-        }
+    private _patchDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => void, onAdd: (item: T, aIndex: number, bIndex: number) => void, onRemove: (item: T, aIndex: number, idx: number) => void): void {
+        return lcsDiff<T>(a, b, onKeep, onAdd, onRemove);
     }
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
     private _prepareValue(v: { action?: string; data?: unknown; rid?: string; soft?: boolean; } | string, addIndirect = false): unknown {
         let val: unknown = v;
@@ -921,14 +834,14 @@ export default class ResClient {
         }
 
         const b = data.map(v => this._prepareValue(v as never));
-        this._patchDiff(a, b,
+        this._patchDiff<unknown>(a, b,
             () => {},
-            (id: string, n: number, idx: number): boolean => this._handleAddEvent(cacheItem, "add", {
+            (id: unknown, n: number, idx: number): boolean => this._handleAddEvent(cacheItem, "add", {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 value: data[n]!,
                 idx
             }),
-            (id: string, m: number, idx: number) => this._handleRemoveEvent(cacheItem, "remove", { idx })
+            (id: unknown, m: number, idx: number) => this._handleRemoveEvent(cacheItem, "remove", { idx })
         );
     }
 
@@ -1080,22 +993,7 @@ export default class ResClient {
     }
 
     get<T = ResModel | ResCollection<unknown> | ResError>(rid: string): Promise<T> {
-        // Check for resource in cache
-        let ci = this.cache[rid];
-        if (ci) {
-            if (ci.promise) {
-                return ci.promise as Promise<T>;
-            }
-            ci.resetTimeout();
-            return Promise.resolve(ci.item as T);
-        }
-
-        ci = new CacheItem(rid, this.unsubscribe);
-        this.cache[rid] = ci;
-
-        return ci.setPromise(
-            this._subscribe(ci, true).then(() => ci.item)
-        ) as Promise<T>;
+        return this.subscribe(rid).then(() => this.getCached<T>(rid)!);
     }
 
     getCached<T = ResModel | ResCollection<unknown> | ResError>(rid: string): T | null {
@@ -1159,12 +1057,25 @@ export default class ResClient {
         return this._send("call", modelId, "set", props);
     }
 
-    setOnConnect(onConnect: OnConnectFunction<this> | null, onConnectError?: OnConnectErrorFunction<this> | null): this {
+    setOnConnect(onConnect: OnConnectFunction | null, onConnectError?: OnConnectErrorFunction | null): this {
         this.onConnect = onConnect;
         if (onConnectError !== undefined) {
             this.onConnectError = onConnectError;
         }
         return this;
+    }
+
+    async subscribe(rid: string): Promise<void> {
+        let ci = this.cache[rid];
+        if (ci) {
+            if (ci.promise) await ci.promise;
+            ci.resetTimeout();
+            return;
+        }
+
+        ci = new CacheItem(rid, this.unsubscribe);
+        this.cache[rid] = ci;
+        return ci.setPromise(this._subscribe(ci, true));
     }
 
     unregisterCollectionType(pattern: string): this {
