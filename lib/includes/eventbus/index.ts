@@ -1,29 +1,29 @@
 import { Debug } from "../../util/Debug.js";
 import Properties from "../../util/Properties.js";
+import { type AnyFunction } from "../../util/types.js";
 
-/* eslint-disable @typescript-eslint/ban-types */
-function rm (list: Array<{ handler: Function; target: object | null; }>, target: object | null, handler: Function | null) {
+function rm(list: Array<{ handler: AnyFunction; target: object | null; }>, target: object | null, handler: AnyFunction | null): void {
     if (!list) {
         return;
     }
     let i = list.length;
     while (i--) {
-        if ((target === null || list[i].target === target) && (handler === null || list[i].handler === handler)) {
+        if ((target === null || list[i]!.target === target) && (handler === null || list[i]!.handler === handler)) {
             list.splice(i, 1);
         }
     }
 }
 
 class EventBus {
-    private _events!: Record<string, Array<{ handler: Function; target: object | null; }>>;
-    private _queue!: Array<[unknown, object | null, string, string | null, Function]> | null;
+    private _events!: Record<string, Array<{ handler: AnyFunction; target: object | null; }>>;
+    private _queue!: Array<[unknown, object | null, string, string | null, AnyFunction]> | null;
     constructor() {
         Properties.of(this)
             .readOnly("_events", {})
             .writable("_queue", null);
     }
 
-    private _exec(cb: [unknown, object | null, string, string | null, Function]) {
+    private _exec(cb: [unknown, object | null, string, string | null, AnyFunction]): void {
         if (this._queue === null) {
             this._queue = [cb];
 
@@ -31,7 +31,7 @@ class EventBus {
                 const queue = this._queue ?? [];
                 this._queue = null;
                 for (const func of queue) {
-                    (func.pop() as Function)(...func);
+                    (func.pop() as AnyFunction)(...func);
                 }
             }, 0);
         } else {
@@ -42,8 +42,8 @@ class EventBus {
 
     emit(target: object, event: string, data?: unknown, namespace?: string): this;
     emit(event: string, data?: unknown, namespace?: string): this;
-    emit(...args: [object, string, unknown?, string?] | [string, unknown?, string?]) {
-        let target: object | null = null, event: string, data: unknown | undefined, namespace: string | undefined;
+    emit(...args: [object, string, unknown?, string?] | [string, unknown?, string?]): this {
+        let target: object | null = null, event: string, data: unknown, namespace: string | undefined;
         if (!args[0] || typeof args[0] === "string") {
             // (events, handler, namespace)
             [event, data, namespace] = args as [string, unknown?, string?];
@@ -80,16 +80,16 @@ class EventBus {
         return this;
     }
 
-    off(target: object, events: string | Array<string> | null, handler?: Function, namespace?: string): this;
-    off(events: string | Array<string> | null, handler?: Function, namespace?: string): this;
-    off(...args: [object, string | Array<string> | null, Function?, string?] | [string | Array<string> | null, Function?, string?]) {
-        let target: object | null = null, events: string | Array<string> | null, handler: Function | null, namespace: string | undefined;
+    off(target: object, events: string | Array<string> | null, handler?: AnyFunction, namespace?: string): this;
+    off(events: string | Array<string> | null, handler?: AnyFunction, namespace?: string): this;
+    off(...args: [object, string | Array<string> | null, AnyFunction?, string?] | [string | Array<string> | null, AnyFunction?, string?]): this {
+        let target: object | null = null, events: string | Array<string> | null, handler: AnyFunction | null, namespace: string | undefined;
         if (!args[0] || typeof args[0] === "string") {
             // (events, handler, namespace)
-            [events, handler = null, namespace] = args as [string | Array<string> | null, Function?, string?];
+            [events, handler = null, namespace] = args as [string | Array<string> | null, AnyFunction?, string?];
         } else {
             // (target, events, handler, namespace)
-            [target, events, handler = null, namespace] = args as [object, string | Array<string> | null, Function?, string?];
+            [target, events, handler = null, namespace] = args as [object, string | Array<string> | null, AnyFunction?, string?];
         }
 
         if (events === null || events.length === 0) {
@@ -125,16 +125,16 @@ class EventBus {
         return this;
     }
 
-    on(target: object, events: string | Array<string> | null, handler: Function, namespace?: string): this;
-    on(events: string | Array<string> | null, handler: Function, namespace?: string): this;
-    on(...args: [object, string | Array<string> | null, Function, string?] | [string | Array<string> | null, Function, string?]) {
-        let target: object | null = null, events: string | Array<string> | null = null, handler: Function, namespace: string | undefined;
+    on(target: object, events: string | Array<string> | null, handler: AnyFunction, namespace?: string): this;
+    on(events: string | Array<string> | null, handler: AnyFunction, namespace?: string): this;
+    on(...args: [object, string | Array<string> | null, AnyFunction, string?] | [string | Array<string> | null, AnyFunction, string?]): this {
+        let target: object | null = null, events: string | Array<string> | null = null, handler: AnyFunction, namespace: string | undefined;
         if (typeof args[1] === "function") {
             // (events, handler, namespace)
-            [events, handler, namespace] = args as [string | Array<string> | null, Function, string?];
+            [events, handler, namespace] = args as [string | Array<string> | null, AnyFunction, string?];
         } else {
             // (target, events, handler, namespace)
-            [target, events, handler, namespace] = args as [object, string | Array<string> | null, Function, string?];
+            [target, events, handler, namespace] = args as [object, string | Array<string> | null, AnyFunction, string?];
         }
 
         if (!handler) {

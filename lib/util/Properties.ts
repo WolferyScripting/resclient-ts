@@ -4,11 +4,11 @@ export default class Properties {
         this.target = target;
     }
 
-    static of(target: object) {
+    static of(target: object): Properties {
         return new Properties(target);
     }
 
-    define(key: string, writable = true, enumerable = false, configurable = true, value?: unknown) {
+    define(key: string, writable = true, enumerable = false, configurable = true, value?: unknown): this {
         Object.defineProperty(this.target, key, {
             writable,
             enumerable,
@@ -19,11 +19,11 @@ export default class Properties {
         return this;
     }
 
-    readOnly(key: string, value?: unknown) {
+    readOnly(key: string, value?: unknown): this {
         return this.define(key, false, undefined, undefined, value);
     }
 
-    readOnlyBulk(...keys: Array<string | [key: string, value?: unknown]>) {
+    readOnlyBulk(...keys: Array<string | [key: string, value?: unknown]>): this {
         for (const key of keys) {
             this.readOnly(...Array.isArray(key) ? key : [key] as [string]);
         }
@@ -31,11 +31,11 @@ export default class Properties {
         return this;
     }
 
-    writable(key: string, value?: unknown) {
+    writable(key: string, value?: unknown): this {
         return this.define(key, true, undefined, undefined, value);
     }
 
-    writableBulk(...keys: Array<string | [key: string, value?: unknown]>) {
+    writableBulk(...keys: Array<string | [key: string, value?: unknown]>): this {
         for (const key of keys) {
             this.writable(...(Array.isArray(key) ? key : [key] as [string]));
         }

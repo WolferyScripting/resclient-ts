@@ -2,24 +2,25 @@ import { States } from "../lib/Constants.js";
 import { type Ref } from "../lib/util/resgate.js";
 import type CacheItem from "../lib/models/CacheItem.js";
 import ResClient from "../lib/models/ResClient.js";
+import { type AnyObject } from "../lib/util/types.js";
 import { expect } from "chai";
 
 
-function expectRefState(refs: Record<string, Ref>, compare: Record<string, States>) {
+function expectRefState(refs: Record<string, Ref>, compare: Record<string, States>): void {
     const actual = {} as Record<string, keyof typeof States>;
     for (const k of Object.keys(refs)) {
-        actual[k] = States[refs[k].st] as keyof typeof States;
+        actual[k] = States[refs[k]!.st] as keyof typeof States;
     }
 
     const expected = {} as Record<string, keyof typeof States>;
     for (const k of Object.keys(compare)) {
-        expected[k] = States[compare[k]] as keyof typeof States;
+        expected[k] = States[compare[k]!] as keyof typeof States;
     }
 
     expect(actual).to.deep.equal(expected);
 }
 
-function getRefState(dta: Record<string, Partial<CacheItem> & { refs?: Array<string>; subscribed?: boolean; }>, root: string) {
+function getRefState(dta: Record<string, Partial<CacheItem> & { refs?: Array<string>; subscribed?: boolean; }>, root: string): AnyObject<Ref> {
     // Prepare refs object
     const refs = { ...dta } as unknown as Record<string, {
         direct:     number;
@@ -32,22 +33,22 @@ function getRefState(dta: Record<string, Partial<CacheItem> & { refs?: Array<str
     for (const k of Object.keys(refs)) {
         refs[k] = {
             rid:        k,
-            item:       dta[k].refs || [],
-            subscribed: !!dta[k].subscribed,
-            direct:     dta[k].direct || 0,
+            item:       dta[k]!.refs || [],
+            subscribed: !!dta[k]!.subscribed,
+            direct:     dta[k]!.direct || 0,
             indirect:   0,
             type:       "collection"
         };
     }
     // Add indirect references
     for (const k of Object.keys(refs)) {
-        for (const v of refs[k].item) {
-            refs[v].indirect++;
+        for (const v of refs[k]!.item) {
+            refs[v]!.indirect++;
         }
     }
 
     const client = new ResClient("ws://localhost");
-    client["_getRefItem"] = v => refs[v as string] as never;
+    client["_getRefItem"] = (v: string): never => refs[v as string] as never;
 
     const r = refs[root];
     // eslint-disable-next-line unicorn/no-useless-undefined

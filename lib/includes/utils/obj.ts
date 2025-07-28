@@ -1,6 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-empty-function */
-export function equal(a: unknown, b: unknown) {
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function */
+
+import type { AnyObject } from "../../util/types.js";
+
+export function equal(a: unknown, b: unknown): boolean {
     // Check if a is a non-object
     if (a === null || typeof a !== "object") {
         return a === b;
@@ -17,7 +19,7 @@ export function equal(a: unknown, b: unknown) {
     if (ak.length !== bk.length) {
         return false;
     }
-    for (let i = 0, k: string; (k = ak[i]); i++) {
+    for (let i = 0, k: string; (k = ak[i]!); i++) {
         if (k !== bk[i]) {
             return false;
         }
@@ -31,19 +33,19 @@ export function equal(a: unknown, b: unknown) {
 }
 export const TYPES = {
     "any": {
-        default() {
+        default(): null {
             return  null;
         },
-        assert(_v: unknown) {},
-        fromString(v: string) {
+        assert(_v: unknown): void {},
+        fromString(v: string): string {
             return v;
         }
     },
     "string": {
-        default() {
+        default(): string {
             return "";
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "string") {
                 throw new TypeError("Not a string");
             }
@@ -51,10 +53,10 @@ export const TYPES = {
         fromString: String
     },
     "?string": {
-        default() {
+        default(): null {
             return null;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "string" && v !== null) {
                 throw new Error("Not a string or null");
             }
@@ -62,15 +64,15 @@ export const TYPES = {
         fromString: String // Not possible to set null
     },
     "number": {
-        default() {
+        default(): number {
             return 0;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "number") {
                 throw new TypeError("Not a number");
             }
         },
-        fromString(v: string | number) {
+        fromString(v: string | number): number {
             v = Number(v);
             if (isNaN(v)) {
                 throw new TypeError("Not a number format");
@@ -79,15 +81,15 @@ export const TYPES = {
         }
     },
     "?number": {
-        default() {
+        default(): null {
             return null;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "number" && v !== null) {
                 throw new Error("Not a number or null");
             }
         },
-        fromString(v: string | number | null) {
+        fromString(v: string | number | null): number | null {
             v = !v || String(v).toLowerCase() === "null" ? null : Number(v);
             if (v !== null && isNaN(v)) {
                 throw new TypeError("Not a number format");
@@ -96,15 +98,15 @@ export const TYPES = {
         }
     },
     "boolean": {
-        default() {
+        default(): boolean {
             return false;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "boolean") {
                 throw new TypeError("Not a boolean");
             }
         },
-        fromString(v: string | boolean) {
+        fromString(v: string | boolean): boolean {
             v = String(v).toLowerCase();
             if (v === "true" || v === "1" || v === "yes") {
                 v = true;
@@ -117,15 +119,15 @@ export const TYPES = {
         }
     },
     "?boolean": {
-        default() {
+        default(): null {
             return null;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "boolean" && v !== null) {
                 throw new Error("Not a boolean or null");
             }
         },
-        fromString(v: string | boolean | null) {
+        fromString(v: string | boolean | null): boolean | null {
             v = String(v).toLowerCase();
             switch (v) {
                 case "true":
@@ -150,54 +152,57 @@ export const TYPES = {
         }
     },
     "object": {
-        default() {
+        default(): AnyObject {
             return {};
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "object" || v === null) {
                 throw new Error("Not an object");
             }
         },
-        fromString(v: string) {
-            return JSON.parse(v) as unknown;
+        fromString(v: string): AnyObject {
+            return JSON.parse(v) as AnyObject;
         }
     },
     "?object": {
-        default() {
+        default(): null {
             return null;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "object") {
                 throw new TypeError("Not an object or null");
             }
         },
-        fromString(v: string) {
-            return JSON.parse(v) as unknown;
+        fromString(v: string): AnyObject | null {
+            if (v === "null") {
+                return null;
+            }
+            return JSON.parse(v) as AnyObject;
         }
     },
     "function": {
         // eslint-disable-next-line unicorn/consistent-function-scoping
-        default() {
-            return () => {};
+        default(): () => void {
+            return (): void => {};
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "function") {
                 throw new TypeError("Not a function");
             }
         },
-        fromString(_v: unknown) {} // Evaluating functions from strings is not allowed
+        fromString(_v: unknown): void {} // Evaluating functions from strings is not allowed
 
     },
     "?function": {
-        default() {
+        default(): null {
             return null;
         },
-        assert(v: unknown) {
+        assert(v: unknown): void {
             if (typeof v !== "function" && v !== null) {
                 throw new Error("Not a function or null");
             }
         },
-        fromString(_v: unknown) {} // Evaluating functions from strings is not allowed
+        fromString(_v: unknown): void {} // Evaluating functions from strings is not allowed
 
     }
 };
@@ -212,23 +217,23 @@ export interface PropertyDefinition {
 }
 /**
  * Updates an target object from a source object based upon a definition
- * @param {object} target Target object
- * @param {object} source Source object
- * @param {Object.<string, string|func/obj~PropertyDefinition>} def Definition object which is a key/value object where the key is the property and the value is the property type or a property definition.
- * @param {boolean} strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is true.
- * @returns {?Object.<string, *>} Key/value object where the key is the updated properties and the value is the old values.
+ * @param target Target object
+ * @param source Source object
+ * @param def Definition object which is a key/value object where the key is the property and the value is the property type or a property definition.
+ * @param strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is true.
+ * @returns Key/value object where the key is the updated properties and the value is the old values.
  */
-export function update(target: object, source: object, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = true) {
+export function update(target: object, source: object, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = true): AnyObject | null {
     if (!def || typeof def !== "object") {
         throw new Error("Invalid definition");
     }
 
     let updated = false;
-    const updateObj = {} as Record<string, unknown>;
+    const updateObj = {} as AnyObject;
 
     // eslint-disable-next-line guard-for-in
     for (const key in def) {
-        let d = def[key];
+        let d = def[key]!;
         if (typeof d === "string") {
             d = {
                 type: d
@@ -300,12 +305,12 @@ export function update(target: object, source: object, def: Record<string, Prope
 
 /**
  * Copies a source object based upon a definition
- * @param {object} source Source object
- * @param {object} def Definition object which is a key/value object where the key is the property and the value is the value type.
- * @param {boolean} strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is false.
- * @returns {object} Copy of the object
+ * @param source Source object
+ * @param def Definition object which is a key/value object where the key is the property and the value is the value type.
+ * @param strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is false.
+ * @returns Copy of the object
  */
-export function copy<T extends Record<string, unknown>>(source: T, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = false) {
+export function copy<T extends AnyObject>(source: T, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = false): T {
     const obj = {} as T;
     update(obj, source, def, strict);
     return obj;

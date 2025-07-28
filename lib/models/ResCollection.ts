@@ -1,55 +1,48 @@
-/* eslint-disable unicorn/no-array-method-this-argument */
-/* eslint-disable @typescript-eslint/ban-ts-comment, @typescript-eslint/ban-types, @typescript-eslint/unbound-method */
 import type ResClient from "./ResClient.js";
 import { copy } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
+import { type AnyObject, type AnyFunction } from "../util/types.js";
 
-export default class ResCollection<V = unknown> {
+export default class ResCollection<V = unknown, C extends ResClient = ResClient> {
     private _idCallback?: (item: V) => string;
     private _list: Array<V> = [];
     private _map!: Record<string, V> | null;
-    protected api!: ResClient;
+    protected api!: C;
     rid!: string;
-    constructor(api: ResClient | null, rid: string, options?: { idCallback?(item: V): string; }) {
+    constructor(api: C | null, rid: string, options?: { idCallback?(item: V): string; }) {
         options = copy(options ?? {}, {
             idCallback: { type: "?function" }
         });
         Properties.of(this)
-            .writableBulk(["_idCallback", options?.idCallback], "_list", ["_map", options.idCallback ? {} : null])
+            .writableBulk(["_idCallback", options?.idCallback?.bind(this)], "_list", ["_map", options.idCallback ? {} : null])
             .readOnly("api", api)
             .define("rid", false, true, true, rid);
     }
-    /** If this collection is empty. */
-    get empty(): boolean {
-        return this.length === 0;
-    }
 
-    get length() {
-        return this._list.length;
-    }
-
-    get list() {
-        return this._list;
-    }
-
-    private _hasID() {
+    private _hasID(): void {
         if (!this._idCallback) {
             throw new Error("No id callback defined");
         }
     }
 
-    [Symbol.iterator]() {
-        let i = 0;
-        const a = this._list ?? [], l = a.length;
-
-        return {
-            next() {
-                return { value: a[i++], done: i > l };
-            }
-        };
+    /** If this collection is empty. */
+    get empty(): boolean {
+        return this.length === 0;
     }
 
-    add(item: V, index: number) {
+    get length(): number {
+        return this._list.length;
+    }
+
+    get list(): Array<V> {
+        return this._list;
+    }
+
+    [Symbol.iterator](): Iterator<V, undefined> {
+        return this._list[Symbol.iterator]();
+    }
+
+    add(item: V, index: number): void {
         this._list.splice(index, 0, item);
 
         if (this._idCallback) {
@@ -65,16 +58,16 @@ export default class ResCollection<V = unknown> {
         }
     }
 
-    at(index: number) {
+    at(index: number): V | undefined {
         return this._list[index];
     }
 
-    auth(method: string, params: unknown) {
-        return this.api.authenticate(this.rid, method, params);
+    auth<T = unknown>(method: string, params: unknown): Promise<T> {
+        return this.api.authenticate<T>(this.rid, method, params);
     }
 
-    call(method: string, params: unknown) {
-        return this.api.call(this.rid, method, params);
+    call<T = unknown>(method: string, params: unknown): Promise<T> {
+        return this.api.call<T>(this.rid, method, params);
     }
 
     /** See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every | Array#every } */
@@ -122,23 +115,23 @@ export default class ResCollection<V = unknown> {
         amount = Math.min(amount, this.length);
 
         const iterable = this[Symbol.iterator]();
-        return Array.from({ length: amount }, () => iterable.next().value);
+        return Array.from({ length: amount }, () => iterable.next().value!);
     }
 
-    get(id: string | number) {
+    get(id: string | number): V | undefined {
         this._hasID();
         return this._map![id];
     }
 
-    getClient() {
+    getClient(): C {
         return this.api;
     }
 
-    indexOf(item: V) {
+    indexOf(item: V): number {
         return this._list.indexOf(item);
     }
 
-    init(data: Array<V> = []) {
+    init(data: Array<V> = []): this {
         this._list = data;
 
         if (this._idCallback) {
@@ -184,12 +177,12 @@ export default class ResCollection<V = unknown> {
         return this.toArray().map(predicate, thisArg);
     }
 
-    off(events: string | Array<string> | null, handler: Function) {
+    off(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOff(this.rid, events, handler);
         return this;
     }
 
-    on(events: string | Array<string> | null, handler: Function) {
+    on(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOn(this.rid, events, handler);
         return this;
     }
@@ -222,12 +215,14 @@ export default class ResCollection<V = unknown> {
         return this.toArray().reduceRight(predicate, initialValue!);
     }
 
-    remove(index: number) {
+    remove(index: number): V | undefined {
         const item = this._list[index];
-        this._list.splice(index, 1);
+        if (item !== undefined) {
+            this._list.splice(index, 1);
 
-        if (this._idCallback) {
-            delete this._map![this._idCallback(item)];
+            if (this._idCallback) {
+                delete this._map![this._idCallback(item)];
+            }
         }
 
         return item;
@@ -243,10 +238,10 @@ export default class ResCollection<V = unknown> {
         return Array.from(this._list);
     }
 
-    toJSON() {
+    toJSON(): Array<unknown> {
         return this._list.map(v => (
             v !== null && typeof v === "object" && "toJSON" in v
-                ? (v as { toJSON(): object; }).toJSON()
+                ? (v as { toJSON(): AnyObject; }).toJSON()
                 : v
         ));
     }

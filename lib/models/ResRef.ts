@@ -13,15 +13,15 @@ export default class ResRef<T = ResModel | ResCollection | ResError> {
             .define("rid", false, true, true, rid);
     }
 
-    equals(o: ResRef) {
+    equals(o: ResRef): boolean {
         return o instanceof ResRef && o.api === this.api && o.rid === this.rid;
     }
 
-    get() {
+    get(): Promise<T> {
         return this.api.get<T>(this.rid);
     }
 
-    toJSON() {
+    toJSON(): Record<"rid", string> {
         return { rid: this.rid };
     }
 }

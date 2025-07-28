@@ -4,14 +4,13 @@ import type ResError from "./ResError.js";
 import { CACHE_ITEM_UNSUBSCRIBE_DELAY, type ResourceType } from "../Constants.js";
 import Properties from "../util/Properties.js";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export default class CacheItem<T extends ResModel | ResCollection | ResError = ResModel | ResCollection | ResError> {
     private _unsubscribe!: (ci: T) => void;
     private _unsubscribeTimeout!: NodeJS.Timeout | null;
     direct = 0;
     indirect = 0;
     item!: T;
-    promise: Promise<any> | null = null;
+    promise: Promise<unknown> | null = null;
     rid!: string;
     subscribed = 0;
     type: ResourceType | null = null;
@@ -21,7 +20,7 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
             .readOnly("rid", rid);
     }
 
-    private _checkUnsubscribe() {
+    private _checkUnsubscribe(): void {
         if (!this.subscribed || this.direct || this._unsubscribeTimeout) {
             return;
         }
@@ -29,7 +28,7 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         this._unsubscribeTimeout = setTimeout(() => this._unsubscribe(this as unknown as T), CACHE_ITEM_UNSUBSCRIBE_DELAY);
     }
 
-    addDirect() {
+    addDirect(): void {
         if (this._unsubscribeTimeout) {
             clearTimeout(this._unsubscribeTimeout);
             this._unsubscribeTimeout = null;
@@ -37,14 +36,14 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         this.direct++;
     }
 
-    addIndirect(val = 1) {
+    addIndirect(val = 1): void {
         this.indirect += val;
         if (this.indirect < 0) {
             throw new Error("Indirect count reached below 0");
         }
     }
 
-    addSubscribed(dir: number) {
+    addSubscribed(dir: number): void {
         this.subscribed += dir === 0 ? -this.subscribed : dir;
         if (!this.subscribed && this._unsubscribeTimeout) {
             clearTimeout(this._unsubscribeTimeout);
@@ -52,7 +51,7 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         }
     }
 
-    removeDirect() {
+    removeDirect(): void {
         this.direct--;
         if (this.direct < 0) {
             throw new Error("Direct count reached below 0");
@@ -65,7 +64,7 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         }
     }
 
-    resetTimeout() {
+    resetTimeout(): void {
         if (this._unsubscribeTimeout) {
             clearTimeout(this._unsubscribeTimeout);
             this._unsubscribeTimeout = null;
@@ -73,7 +72,7 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         }
     }
 
-    setItem(item: T, type: ResourceType) {
+    setItem(item: T, type: ResourceType): this {
         this.item = item;
         this.type = type ;
         this.promise = null;
@@ -81,14 +80,14 @@ export default class CacheItem<T extends ResModel | ResCollection | ResError = R
         return this;
     }
 
-    setPromise(promise: Promise<any>) {
+    setPromise<P extends Promise<unknown>>(promise: P): P {
         if (!this.item) {
             this.promise = promise;
         }
         return promise;
     }
 
-    setType(modelType: ResourceType) {
+    setType(modelType: ResourceType): this {
         this.type = modelType;
         return this;
     }

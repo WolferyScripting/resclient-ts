@@ -1,17 +1,17 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/unbound-method */
 import type ResClient from "./ResClient.js";
 import { copy, equal, update, type PropertyDefinition } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
+import { type AnyFunction, type AnyObject } from "../util/types.js";
 
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
 }
-export default class ResModel {
+export default class ResModel<C extends ResClient = ResClient> {
     protected _definition?: Record<string, PropertyDefinition>;
-    protected _props!: Record<string, unknown>;
-    protected api!: ResClient;
+    protected _props!: AnyObject;
+    protected api!: C;
     rid!: string;
-    constructor(api: ResClient, rid: string, options?: ResModelOptions) {
+    constructor(api: C, rid: string, options?: ResModelOptions) {
         update(this, options ?? {}, {
             definition: { type: "?object", property: "_definition" }
         });
@@ -23,23 +23,23 @@ export default class ResModel {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected _shouldPromoteKey(key: string, value: unknown) {
+    protected _shouldPromoteKey(key: string, value: unknown): true {
         return true;
     }
 
-    auth(method: string, params: unknown) {
-        return this.api.authenticate(this.rid, method, params);
+    auth<T = unknown>(method: string, params: unknown): Promise<T> {
+        return this.api.authenticate<T>(this.rid, method, params);
     }
 
-    call<T = unknown>(method: string, params?: unknown) {
+    call<T = unknown>(method: string, params?: unknown): Promise<T> {
         return this.api.call<T>(this.rid, method, params);
     }
 
-    getClient() {
+    getClient(): C {
         return this.api;
     }
 
-    init(data?: Record<string, unknown>) {
+    init(data?: AnyObject): this {
         if (data) {
             this.update(data);
         }
@@ -47,21 +47,22 @@ export default class ResModel {
         return this;
     }
 
-    off(events: string | Array<string> | null, handler: Function) {
+    off(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOff(this.rid, events, handler);
         return this;
     }
 
-    on(events: string | Array<string> | null, handler: Function) {
+    on(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOn(this.rid, events, handler);
         return this;
     }
 
-    setModel(props: Record<string, unknown>) {
+    // TODO: needs better typing
+    setModel(props: AnyObject): Promise<unknown> {
         return this.api.setModel(this.rid, props);
     }
 
-    toJSON() {
+    toJSON(): AnyObject {
         const o = this._definition
             ? copy(this._props, this._definition)
             : ({ ...this._props });
@@ -75,12 +76,12 @@ export default class ResModel {
         return o;
     }
 
-    update(props: Record<string, unknown>, reset = false) {
+    update(props: AnyObject, reset = false): AnyObject | null {
         if (!props) {
             return null;
         }
 
-        let changed: Record<string, unknown> | null = null, v: unknown, promote: boolean;
+        let changed: AnyObject | null = null, v: unknown, promote: boolean;
         const p = this._props;
 
 
@@ -96,12 +97,12 @@ export default class ResModel {
         if (this._definition) {
             changed = update(p, props, this._definition);
             for (const key in changed) {
-                if ((Object.hasOwn(this, key) || !(this as Record<string, unknown>)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false) {
+                if ((Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false) {
                     v = p[key];
                     if (v === undefined) {
-                        delete (this as Record<string, unknown>)[key];
+                        delete (this as AnyObject)[key];
                     } else {
-                        (this as Record<string, unknown>)[key] = v;
+                        (this as AnyObject)[key] = v;
                     }
                 }
             }
@@ -109,19 +110,19 @@ export default class ResModel {
             // eslint-disable-next-line guard-for-in
             for (const key in props) {
                 v = props[key];
-                promote = (Object.hasOwn(this, key) || !(this as Record<string, unknown>)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false && this._shouldPromoteKey(key, v);
+                promote = (Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false && this._shouldPromoteKey(key, v);
                 if (!equal(p[key], v)) {
                     changed = changed || {};
                     changed[key] = p[key];
                     if (v === undefined) {
                         delete p[key];
                         if (promote) {
-                            delete (this as Record<string, unknown>)[key];
+                            delete (this as AnyObject)[key];
                         }
                     } else {
                         p[key] = v;
                         if (promote) {
-                            (this as Record<string, unknown>)[key] = v;
+                            (this as AnyObject)[key] = v;
                         }
                     }
                 }

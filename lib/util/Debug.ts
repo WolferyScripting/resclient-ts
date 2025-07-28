@@ -6,7 +6,7 @@ let debug: import("debug").Debug | undefined;
 try {
     debug = (await import("debug")).default;
 } catch {}
-export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>) {
+export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>): void {
     if (typeof arg0 === "object" && arg0 !== null) {
         arg0 = Object.create(arg0);
         for (const s of Object.getOwnPropertySymbols(arg0)) {

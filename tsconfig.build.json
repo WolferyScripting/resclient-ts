@@ -23,7 +23,8 @@
     "declaration": true,
     "noEmitOnError": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": ["lib/**/*"],
   "exclude": ["node_modules", "dist", "test"]

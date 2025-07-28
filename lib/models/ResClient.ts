@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/ban-types */
 import CacheItem from "./CacheItem.js";
 import TypeList, { type ItemFactory } from "./TypeList.js";
 import ResCollection from "./ResCollection.js";
@@ -35,18 +34,17 @@ import type {
 import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
+import { type AnyFunction, type AnyObject } from "../util/types.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OnConnectFunction = (api: ResClient) => any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OnConnectErrorFunction = (api: ResClient, err: unknown) => any;
-export interface ClientOptions {
+export type OnConnectFunction<C extends ResClient> = (api: C) => unknown;
+export type OnConnectErrorFunction<C extends ResClient> = (api: C, err: unknown) => unknown;
+export interface ClientOptions<C extends ResClient> {
     eventBus?: EventBus;
     namespace?: string;
-    onConnect?: OnConnectFunction;
-    onConnectError?: OnConnectErrorFunction;
+    onConnect?: OnConnectFunction<C>;
+    onConnectError?: OnConnectErrorFunction<C>;
 }
 
 export interface Request {
@@ -56,7 +54,7 @@ export interface Request {
     resolve(value: unknown): void;
 }
 
-export function getRID(v: unknown) {
+export function getRID(v: unknown): string | null {
     if (typeof v === "object" && v !== null) {
         if ("getResourceID" in v && typeof v.getResourceID === "function") {
             return v.getResourceID() as string;
@@ -78,12 +76,12 @@ export default class ResClient {
     private unsubscribe = this._unsubscribe.bind(this);
     cache: Partial<Record<string, CacheItem>> = {};
     connectCallback: { reject(err: ErrorData): void; resolve(): void; } | null = null;
-    connectPromise: Promise<unknown> | null = null;
+    connectPromise: Promise<void> | null = null;
     connected = false;
     eventBus = eventBus;
     namespace = "resclient";
-    onConnect: OnConnectFunction | null = null;
-    onConnectError: OnConnectErrorFunction | null = null;
+    onConnect: OnConnectFunction<this> | null = null;
+    onConnectError: OnConnectErrorFunction<this> | null = null;
     protocol!: number;
     requestID = 1;
     requests: Record<number, Request> = {};
@@ -91,36 +89,36 @@ export default class ResClient {
     tryConnect = false;
     types = {
         collection: {
-            id:          COLLECTION_TYPE as typeof COLLECTION_TYPE,
+            id:          COLLECTION_TYPE,
             list:        new TypeList((api, rid) => new ResCollection(api, rid)),
-            prepareData: (data: Array<unknown>) => data.map(item => this._prepareValue(item as never, true)),
-            getFactory(rid: string) {
+            prepareData: (data: Array<unknown>): Array<unknown> => data.map(item => this._prepareValue(item as never, true)),
+            getFactory(rid: string): ItemFactory<ResCollection> {
                 return this.list.getFactory(rid);
             },
             synchronize: this._syncCollection.bind(this)
         },
         error: {
-            id:          ERROR_TYPE as typeof ERROR_TYPE,
-            prepareData: (data: unknown) => data,
+            id:          ERROR_TYPE,
+            prepareData: (data: unknown): unknown => data,
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            getFactory(_rid: string) {
-                return (api: ResClient, rid: string) => new ResError(rid);
+            getFactory(_rid: string): ItemFactory<ResError> {
+                return (api: ResClient, rid: string): ResError => new ResError(rid);
             },
             // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-            synchronize(cacheItem: CacheItem<ResError>, data: Array<RIDRef>) {}
+            synchronize(cacheItem: CacheItem<ResError>, data: Array<RIDRef>): void {}
         },
         model: {
-            id:          MODEL_TYPE as typeof MODEL_TYPE,
+            id:          MODEL_TYPE,
             list:        new TypeList((api, rid) => new ResModel(api, rid)),
-            prepareData: (data: Record<string, unknown>) => {
-                const obj = {} as Record<string, unknown>;
+            prepareData: (data: AnyObject): AnyObject => {
+                const obj = {} as AnyObject;
                 // eslint-disable-next-line guard-for-in
                 for (const key of Object.keys(data)) {
                     obj[key] = this._prepareValue(data[key] as never, true);
                 }
                 return obj;
             },
-            getFactory(rid: string) {
+            getFactory(rid: string): ItemFactory<ResModel> {
                 return this.list.getFactory(rid);
             },
             synchronize: this._syncModel.bind(this)
@@ -128,7 +126,7 @@ export default class ResClient {
     };
     ws: WebSocket | null = null;
     wsFactory: (() => WebSocket);
-    constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions = {}) {
+    constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions<ResClient> = {}) {
         this.eventBus = options.eventBus || this.eventBus;
         if (options.eventBus !== undefined) {
             this.eventBus = options.eventBus;
@@ -146,31 +144,27 @@ export default class ResClient {
             this.onConnectError = options.onConnectError;
         }
 
-        this.wsFactory = typeof hostUrlOrFactory === "string" ? () => new WebSocket(hostUrlOrFactory) : hostUrlOrFactory;
+        this.wsFactory = typeof hostUrlOrFactory === "string" ? (): WebSocket => new WebSocket(hostUrlOrFactory) : hostUrlOrFactory;
 
         Properties.of(this)
             .readOnlyBulk("cache", "eventBus", "onClose", "onError", "onMessage", "onOpen", "requests", "types", "unsubscribe", "wsFactory")
             .writableBulk("connectCallback", "connected", "connectPromise", "namespace", "onConnect", "onConnectError", "protocol", "requestID", "stale", "tryConnect", "ws");
     }
 
-    get supportedProtocol() {
-        return SUPPORTED_PROTOCOL;
-    }
-
-    private _addStale(rid: string) {
+    private _addStale(rid: string): void {
         if (!this.stale) {
             this.stale = {};
         }
         this.stale[rid] = true;
     }
 
-    private _cacheResources(r: Shared) {
+    private _cacheResources(r: Shared): void {
         if (!r || !(r.models || r.collections || r.errors)) {
             return;
         }
 
         const sync = {} as Record<typeof RESOURCE_TYPES[number], Record<string, Ref>>;
-        const rr =  (t: typeof RESOURCE_TYPES[number]) => ({ collection: r.collections, model: r.models, error: r.errors }[t]!);
+        const rr =  (t: typeof RESOURCE_TYPES[number]): Refs => ({ collection: r.collections, model: r.models, error: r.errors }[t]!);
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => (sync[t] = this._createItems(rr(t), this.types[t])! as never));
         // eslint-disable-next-line unicorn/no-array-for-each
@@ -180,7 +174,7 @@ export default class ResClient {
 
     }
 
-    private _call<T = unknown>(type: string, rid: string, method?: string, params?: unknown) {
+    private _call<T = unknown>(type: string, rid: string, method?: string, params?: unknown): Promise<T> {
         return this._send<{ payload: T; rid?: string; }>(type, rid, method || "", params)
             .then(result => {
                 if (result.rid) {
@@ -194,7 +188,7 @@ export default class ResClient {
             });
     }
 
-    private _connectReject(e: ErrorData & { data?: unknown; }) {
+    private _connectReject(e: ErrorData & { data?: unknown; }): void {
         this.connectPromise = null;
         this.ws = null;
 
@@ -204,19 +198,19 @@ export default class ResClient {
         }
     }
 
-    private _connectResolve() {
+    private _connectResolve(): void {
         if (this.connectCallback) {
             this.connectCallback.resolve();
             this.connectCallback = null;
         }
     }
 
-    private _createItems(refs: Refs, type: ResType) {
+    private _createItems(refs: Refs, type: ResType): AnyObject | undefined {
         if (!refs) {
             return;
         }
 
-        let sync: Record<string, unknown> | undefined;
+        let sync: AnyObject | undefined;
         for (const rid of Object.keys(refs)) {
             let ci = this.cache[rid];
             if (ci) {
@@ -244,7 +238,7 @@ export default class ResClient {
         return sync;
     }
 
-    private _deleteRef(ci: CacheItem<ResCollection>) {
+    private _deleteRef(ci: CacheItem<ResCollection>): void {
         const item = ci.item;
         let ri: CacheItem | null;
         switch (ci.type) {
@@ -273,11 +267,11 @@ export default class ResClient {
         this._removeStale(ci.rid);
     }
 
-    private _emit(event: string, data: unknown) {
+    private _emit(event: string, data: unknown): void {
         this.eventBus.emit(this, event, data, this.namespace);
     }
 
-    private _getRefItem(v: unknown) {
+    private _getRefItem(v: unknown): CacheItem | null {
         const rid = getRID(v);
         if (!rid) {
             return null;
@@ -292,8 +286,8 @@ export default class ResClient {
         return refItem;
     }
 
-    private _getRefState(ci: CacheItem) {
-        const refs = {} as Record<string, Ref>;
+    private _getRefState(ci: CacheItem): AnyObject<Ref> {
+        const refs = {} as AnyObject<Ref>;
         // Quick exit
         if (ci.subscribed) {
             return refs;
@@ -304,7 +298,7 @@ export default class ResClient {
         return refs;
     }
 
-    private _handleAddEvent(ci: CacheItem<ResCollection>, event: string, data: AddEventData) {
+    private _handleAddEvent(ci: CacheItem<ResCollection>, event: string, data: AddEventData): boolean {
         if (ci.type !== COLLECTION_TYPE) {
             return false;
         }
@@ -318,7 +312,7 @@ export default class ResClient {
         return true;
     }
 
-    private _handleChangeEvent(cacheItem: CacheItem<ResModel>, event: string, data: ChangeEventData, reset: boolean) {
+    private _handleChangeEvent(cacheItem: CacheItem<ResModel>, event: string, data: ChangeEventData, reset: boolean): boolean {
         if (cacheItem.type !== MODEL_TYPE) {
             return false;
         }
@@ -329,7 +323,7 @@ export default class ResClient {
         let rid;
         const vals = data.values;
         for (const key of Object.keys(vals)) {
-            vals[key] = this._prepareValue(vals[key]) as string;
+            vals[key] = this._prepareValue(vals[key]!) as string;
         }
 
         // Update the model with new values
@@ -364,7 +358,7 @@ export default class ResClient {
         return true;
     }
 
-    private _handleErrorResponse(req: Request, data: unknown) {
+    private _handleErrorResponse(req: Request, data: unknown): void {
         const m = req.method;
         // Extract the rid if possible
         let rid = "";
@@ -388,10 +382,10 @@ export default class ResClient {
         req.reject(err);
     }
 
-    private _handleEvent(data: { data: unknown; event: string; }) {
+    private _handleEvent(data: { data: unknown; event: string; }): void {
         // Event
         const index = data.event.lastIndexOf(".");
-        if (index < 0 || index === data.event.length - 1) {
+        if (index === -1 || index === data.event.length - 1) {
             throw new Error(`Malformed event name: ${data.event}`);
         }
 
@@ -431,12 +425,12 @@ export default class ResClient {
         }
     }
 
-    private _handleFailedSubscribe(ci: CacheItem) {
+    private _handleFailedSubscribe(ci: CacheItem): void {
         ci.addSubscribed(-1);
         this._tryDelete(ci);
     }
 
-    private _handleRemoveEvent(ci: CacheItem<ResCollection>, event: string, data: RemoveEventData) {
+    private _handleRemoveEvent(ci: CacheItem<ResCollection>, event: string, data: RemoveEventData): boolean {
         if (ci.type !== COLLECTION_TYPE) {
             return false;
         }
@@ -458,18 +452,18 @@ export default class ResClient {
         return true;
     }
 
-    private _handleSuccessResponse(req: Request, data: unknown) {
+    private _handleSuccessResponse(req: Request, data: unknown): void {
         req.resolve((data as Record<"result", unknown>).result);
     }
 
-    private _handleUnsubscribeEvent(ci: CacheItem) {
+    private _handleUnsubscribeEvent(ci: CacheItem): boolean {
         ci.addSubscribed(0);
         this._tryDelete(ci);
         this.eventBus.emit(ci.item, `${this.namespace}.resource.${ci.rid}.unsubscribe`, { item: ci.item });
         return true;
     }
 
-    private _initItems(refs: Refs, type: ResType) {
+    private _initItems(refs: Refs, type: ResType): void {
         if (!refs) {
             return;
         }
@@ -481,14 +475,15 @@ export default class ResClient {
         }
     }
 
-    private _markDelete(refs: Record<string, Ref>, ci: CacheItem, state: unknown) {
+    // @FIXME: this is a mess
+    private _markDelete(refs: Record<string, Ref>, ci: CacheItem, state: unknown): unknown {
         // Quick exit if it is already subscribed
         if (ci.subscribed) {
             return false;
         }
 
         const rid = ci.rid;
-        const r = refs[rid];
+        const r = refs[rid]!;
 
         if (r.st === States.KEEP) {
             return false;
@@ -523,7 +518,7 @@ export default class ResClient {
         return r.rc > 0 ? rid : state;
     }
 
-    private async _onClose(e: unknown) {
+    private async _onClose(e: unknown): Promise<void> {
         if (typeof e === "object" && e !== null) {
             if ("message" in e) {
                 Debug("ws", "ResClient close", ...[e.message, (e as { code?: string; }).code].filter(Boolean));
@@ -566,18 +561,18 @@ export default class ResClient {
         }
     }
 
-    private async _onError(e: unknown) {
+    private async _onError(e: unknown): Promise<void> {
         Debug("ws", "ResClient error", e);
         this._connectReject({ code: SystemErrorCodes.CONNECTION_ERROR, message: "Connection error", data: e });
     }
 
-    private async _onMessage(e: MessageEvent) {
+    private async _onMessage(e: MessageEvent): Promise<void> {
         this._receive((e as { data: string; }).data);
     }
 
-    private async _onOpen(e: unknown) {
+    private async _onOpen(e: unknown): Promise<void> {
         Debug("ws", "ResClient open");
-        let onConnectError: unknown | null = null;
+        let onConnectError: unknown = null;
         await this._sendNow<{ protocol: string; }>("version", { protocol: this.supportedProtocol })
             .then(ver=> {
                 this.protocol = versionToInt(ver.protocol) || LEGACY_PROTOCOL;
@@ -627,7 +622,7 @@ export default class ResClient {
 
     // this is copied word-for-word as I cannot wrap my brain around this mess of code
     /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
-    private _patchDiff(a: Array<any>, b: Array<any>, onKeep: Function, onAdd: Function, onRemove: Function) {
+    private _patchDiff(a: Array<any>, b: Array<any>, onKeep: AnyFunction, onAdd: AnyFunction, onRemove: AnyFunction): void {
         // Do a LCS matric calculation
         // https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
         let t, i, j, s = 0, aa, bb, m = a.length, n = b.length;
@@ -710,13 +705,13 @@ export default class ResClient {
         // Do the adds
         const len = adds.length - 1;
         for (i = len; i >= 0; i--) {
-            [ n, idx, j ] = adds[i];
+            [ n, idx, j ] = adds[i]! as [number, number, number];
             onAdd(bb[n], n + s, idx - r + j + len - i);
         }
     }
     /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
-    private _prepareValue(v: { action?: string; data?: unknown; rid?: string; soft?: boolean; } | string, addIndirect = false) {
+    private _prepareValue(v: { action?: string; data?: unknown; rid?: string; soft?: boolean; } | string, addIndirect = false): unknown {
         let val: unknown = v;
         if (v !== null && typeof v === "object") {
             if (v.rid) {
@@ -746,8 +741,8 @@ export default class ResClient {
         return val;
     }
 
-    private _receive(json: string) {
-        const data = JSON.parse(json.trim()) as Record<string, unknown>;
+    private _receive(json: string): void {
+        const data = JSON.parse(json.trim()) as AnyObject;
         Debug("ws:receive", "<-", data);
 
         if (Object.hasOwn(data, "id")) {
@@ -773,7 +768,7 @@ export default class ResClient {
         }
     }
 
-    private async _reconnect(noDelay = false) {
+    private async _reconnect(noDelay = false): Promise<void> {
         if (noDelay) {
             await this.connect();
             return;
@@ -787,7 +782,7 @@ export default class ResClient {
         }, RECONNECT_DELAY);
     }
 
-    private _removeStale(rid: string) {
+    private _removeStale(rid: string): void {
         if (this.stale) {
             delete this.stale[rid];
             if (Object.keys(this.stale).length === 0) {
@@ -797,7 +792,7 @@ export default class ResClient {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private _seekRefs(refs: Record<string, Ref>, ci: CacheItem, state: States) {
+    private _seekRefs(refs: Record<string, Ref>, ci: CacheItem, state: States): boolean {
         // Quick exit if it is already subscribed
         if (ci.subscribed) {
             return false;
@@ -814,7 +809,7 @@ export default class ResClient {
         return true;
     }
 
-    private _send<T = unknown>(action: string, rid: string, method?: string, params?: unknown) {
+    private _send<T = unknown>(action: string, rid: string, method?: string, params?: unknown): Promise<T> {
         if (!rid) {
             throw new Error("Invalid resource ID");
         }
@@ -834,7 +829,7 @@ export default class ResClient {
                 .then(() => this._sendNow<T>(m, params));
     }
 
-    private _sendNow<T = unknown>(method: string, params?: unknown) {
+    private _sendNow<T = unknown>(method: string, params?: unknown): Promise<T> {
         return new Promise<T>((resolve, reject) => {
             const req = { id: this.requestID++, method, params };
 
@@ -851,7 +846,7 @@ export default class ResClient {
         });
     }
 
-    private _sendUnsubscribe(ci: CacheItem, count: number) {
+    private _sendUnsubscribe(ci: CacheItem, count: number): void {
         this._send("unsubscribe", ci.rid, undefined, count > 1 ? { count } : null)
             .then(() => {
                 ci.addSubscribed(-count);
@@ -860,14 +855,14 @@ export default class ResClient {
             .catch(() => this._tryDelete(ci));
     }
 
-    private _setStale(rid: string) {
+    private _setStale(rid: string): void {
         this._addStale(rid);
         if (this.connected) {
             setTimeout(() => this._subscribeToStale(rid), SUBSCRIBE_STALE_DELAY);
         }
     }
 
-    private async _subscribe(ci: CacheItem, throwError = false) {
+    private async _subscribe(ci: CacheItem, throwError = false): Promise<void> {
         const rid = ci.rid;
         ci.addSubscribed(1);
         this._removeStale(rid);
@@ -883,21 +878,21 @@ export default class ResClient {
             });
     }
 
-    private async _subscribeReferred(ci: CacheItem) {
+    private async _subscribeReferred(ci: CacheItem): Promise<void> {
         const i = ci.subscribed;
         ci.subscribed = 0;
         const refs = this._getRefState(ci);
         ci.subscribed = i;
 
         for (const rid of Object.keys(refs)) {
-            const r = refs[rid];
+            const r = refs[rid]!;
             if (r.st === States.STALE) {
                 await this._subscribe(r.ci);
             }
         }
     }
 
-    private async _subscribeToAllStale() {
+    private async _subscribeToAllStale(): Promise<void> {
         if (!this.stale) {
             return;
         }
@@ -907,7 +902,7 @@ export default class ResClient {
         }
     }
 
-    private async _subscribeToStale(rid: string) {
+    private async _subscribeToStale(rid: string): Promise<void> {
         if (!this.connected || !this.stale || !this.stale[rid]) {
             return;
         }
@@ -917,7 +912,7 @@ export default class ResClient {
         return this._subscribe(ci);
     }
 
-    private _syncCollection(cacheItem: CacheItem<ResCollection>, data: Array<RIDRef>) {
+    private _syncCollection(cacheItem: CacheItem<ResCollection>, data: Array<RIDRef>): void {
         const collection = cacheItem.item;
         let i = collection.length;
         const a = Array.from({ length: i });
@@ -928,16 +923,16 @@ export default class ResClient {
         const b = data.map(v => this._prepareValue(v as never));
         this._patchDiff(a, b,
             () => {},
-            (id: string, n: number, idx: number) => this._handleAddEvent(cacheItem, "add", {
+            (id: string, n: number, idx: number): boolean => this._handleAddEvent(cacheItem, "add", {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                value: data[n],
+                value: data[n]!,
                 idx
             }),
             (id: string, m: number, idx: number) => this._handleRemoveEvent(cacheItem, "remove", { idx })
         );
     }
 
-    private _syncItems(refs: Record<string, unknown>, type: ResType) {
+    private _syncItems(refs: AnyObject, type: ResType): void {
         if (!refs) {
             return;
         }
@@ -948,11 +943,11 @@ export default class ResClient {
         }
     }
 
-    private _syncModel(ci: CacheItem<ResModel>, data: ChangeEventData["values"]) {
+    private _syncModel(ci: CacheItem<ResModel>, data: ChangeEventData["values"]): void {
         this._handleChangeEvent(ci, "change", { values: data }, true);
     }
 
-    private _traverse(ci: CacheItem, cb: (ci: CacheItem, state: States) => States | boolean, state: States, skipFirst = false) {
+    private _traverse(ci: CacheItem, cb: (ci: CacheItem, state: States) => States | boolean, state: States, skipFirst = false): void {
         // Call callback to get new state to pass to
         // children. If false, we should not traverse deeper
         if (!skipFirst) {
@@ -989,11 +984,11 @@ export default class ResClient {
         }
     }
 
-    private _tryDelete(ci: CacheItem) {
+    private _tryDelete(ci: CacheItem): void {
         const refs = this._getRefState(ci);
 
         for (const rid of Object.keys(refs)) {
-            const r = refs[rid];
+            const r = refs[rid]!;
             switch (r.st) {
                 case States.STALE: {
                     this._setStale(rid);
@@ -1007,7 +1002,7 @@ export default class ResClient {
         }
     }
 
-    private async _unsubscribe(ci: CacheItem) {
+    private async _unsubscribe(ci: CacheItem): Promise<void> {
         if (!ci.subscribed) {
             if (this.stale && this.stale[ci.rid]) {
                 this._tryDelete(ci);
@@ -1027,15 +1022,19 @@ export default class ResClient {
         }
     }
 
-    authenticate<T = unknown>(rid: string, method: string, params: unknown) {
+    get supportedProtocol(): string {
+        return SUPPORTED_PROTOCOL;
+    }
+
+    authenticate<T = unknown>(rid: string, method: string, params: unknown): Promise<T> {
         return this._call<T>("auth", rid, method, params);
     }
 
-    call<T = unknown>(rid: string, method: string, params?: unknown) {
+    call<T = unknown>(rid: string, method: string, params?: unknown): Promise<T> {
         return this._call<T>("call", rid, method, params);
     }
 
-    connect() {
+    connect(): Promise<void> {
         this.tryConnect = true;
         if (!this.connectPromise) {
             this.connectPromise = new Promise<void>((resolve, reject) => {
@@ -1055,7 +1054,7 @@ export default class ResClient {
         return this.connectPromise;
     }
 
-    create(rid: string, params: unknown) {
+    async create(rid: string, params: unknown): Promise<ResModel | ResError | ResCollection> {
         return this._send<Shared>("new", rid, undefined, params)
             .then(result => {
                 this._cacheResources(result);
@@ -1067,7 +1066,7 @@ export default class ResClient {
             });
     }
 
-    async disconnect() {
+    async disconnect(): Promise<void> {
         this.tryConnect = false;
 
         if (this.ws) {
@@ -1099,35 +1098,35 @@ export default class ResClient {
         ) as Promise<T>;
     }
 
-    getCached<T = ResModel | ResCollection<unknown> | ResError>(rid: string) {
+    getCached<T = ResModel | ResCollection<unknown> | ResError>(rid: string): T | null {
         return this.cache[rid]?.item as T ?? null;
     }
 
-    off(handler: Function): this;
-    off(events: string | Array<string> | null, handler: Function): this;
-    off(...args: [string | Array<string> | null, Function] | [Function]) {
-        this.eventBus.off(this, args.length === 1 ? null : args[0], args[args.length - 1] as Function, this.namespace);
+    off(handler: AnyFunction): this;
+    off(events: string | Array<string> | null, handler: AnyFunction): this;
+    off(...args: [string | Array<string> | null, AnyFunction] | [AnyFunction]): this {
+        this.eventBus.off(this, args.length === 1 ? null : args[0], args.at(-1) as AnyFunction, this.namespace);
         return this;
     }
 
-    on(handler: Function): this;
-    on(events: string | Array<string> | null, handler: Function): this;
-    on(...args: [string | Array<string> | null, Function] | [Function]) {
-        this.eventBus.on(this, args.length === 1 ? null : args[0], args[args.length - 1] as Function, this.namespace);
+    on(handler: AnyFunction): this;
+    on(events: string | Array<string> | null, handler: AnyFunction): this;
+    on(...args: [string | Array<string> | null, AnyFunction] | [AnyFunction]): this {
+        this.eventBus.on(this, args.length === 1 ? null : args[0], args.at(-1) as AnyFunction, this.namespace);
         return this;
     }
 
-    registerCollectionType(pattern: string, factory: ItemFactory<ResCollection>) {
+    registerCollectionType(pattern: string, factory: ItemFactory<ResCollection>): this {
         this.types.collection.list.addFactory(pattern, factory);
         return this;
     }
 
-    registerModelType(pattern: string, factory: ItemFactory<ResModel>) {
+    registerModelType(pattern: string, factory: ItemFactory<ResModel>): this {
         this.types.model.list.addFactory(pattern, factory);
         return this;
     }
 
-    resourceOff(rid: string, events: string | Array<string> | null, handler: Function) {
+    resourceOff(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
@@ -1137,7 +1136,7 @@ export default class ResClient {
         this.eventBus.off(cacheItem.item, events, handler, `${this.namespace}.resource.${rid}`);
     }
 
-    resourceOn(rid: string, events: string | Array<string> | null, handler: Function) {
+    resourceOn(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
@@ -1147,7 +1146,8 @@ export default class ResClient {
         this.eventBus.on(cacheItem.item, events, handler, `${this.namespace}.resource.${rid}`);
     }
 
-    setModel(modelId: string, props: Record<string, unknown>) {
+    // TODO: needs better typing
+    setModel(modelId: string, props: AnyObject): Promise<unknown> {
         props = { ...props };
         // Replace undefined with actionDelete object
         for (const k of Object.keys(props)) {
@@ -1159,7 +1159,7 @@ export default class ResClient {
         return this._send("call", modelId, "set", props);
     }
 
-    setOnConnect(onConnect: OnConnectFunction | null, onConnectError?: OnConnectErrorFunction | null) {
+    setOnConnect(onConnect: OnConnectFunction<this> | null, onConnectError?: OnConnectErrorFunction<this> | null): this {
         this.onConnect = onConnect;
         if (onConnectError !== undefined) {
             this.onConnectError = onConnectError;
@@ -1167,12 +1167,12 @@ export default class ResClient {
         return this;
     }
 
-    unregisterCollectionType(pattern: string) {
+    unregisterCollectionType(pattern: string): this {
         this.types.collection.list.removeFactory(pattern);
         return this;
     }
 
-    unregisterModelType(pattern: string) {
+    unregisterModelType(pattern: string): this {
         this.types.model.list.removeFactory(pattern);
         return this;
     }

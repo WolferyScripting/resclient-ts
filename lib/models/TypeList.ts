@@ -1,17 +1,23 @@
-// I'm done playing guessing games for what this thing's type should be
-/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
 import type ResClient from "./ResClient.js";
 
 export type ItemFactory<T = unknown> = (api: ResClient, rid: string, data?: Record<string, unknown>) => T;
+export interface TypeListNode<T> {
+    factory?: ItemFactory<T>;
+    fwc?: TypeListNode<T>; // full wildcard: ">"
+    nodes?: Record<string, TypeListNode<T>>;
+    pwc?: TypeListNode<T>; // partial wildcard: "*"
+}
+
+
 export default class TypeList<T = unknown> {
     factory: ItemFactory<T>;
-    root: any = {};
+    root: TypeListNode<T> = {};
     constructor(factory: ItemFactory<T>) {
         this.factory = factory;
     }
 
-    private _match(token: Array<string>, index: number, root: TypeList["root"]): false | ItemFactory<T> {
-        const t = token[index++];
+    private _match(token: Array<string>, index: number, root: TypeListNode<T>): undefined | ItemFactory<T> {
+        const t = token[index++]!;
         let c = 2;
         let n = root.nodes ? root.nodes[t] : undefined;
         while (c--) {
@@ -33,7 +39,7 @@ export default class TypeList<T = unknown> {
         return n && n.factory;
     }
 
-    addFactory(pattern: string, factory: ItemFactory<T>) {
+    addFactory(pattern: string, factory: ItemFactory<T>): void {
         const tokens = pattern.split(".");
         let l = this.root;
         let n: { factory?: ItemFactory<T>; };
@@ -75,12 +81,12 @@ export default class TypeList<T = unknown> {
         l.factory = factory;
     }
 
-    getFactory(rid: string) {
+    getFactory(rid: string): ItemFactory<T> {
         const tokens = rid.replace(/\?.*$/, "").split(".");
         return this._match(tokens, 0, this.root) || this.factory;
     }
 
-    removeFactory(pattern: string) {
+    removeFactory(pattern: string): ItemFactory<T> | undefined {
         const tokens = pattern.split(".");
         let l = this.root;
         let n;

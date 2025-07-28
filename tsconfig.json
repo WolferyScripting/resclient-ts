@@ -23,8 +23,14 @@
     "declaration": true,
     "noEmitOnError": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noUncheckedIndexedAccess": true
   },
-  "include": ["lib/**/*", "test/**/*"],
+  "include": [
+    "lib/**/*",
+    "test/**/*",
+    "local/ResClient.testd.ts",
+    "local/mock-socket.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

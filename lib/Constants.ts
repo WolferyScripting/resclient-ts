@@ -1,4 +1,4 @@
-export function versionToInt(version: string) {
+export function versionToInt(version: string): number {
     if (!version) {
         return 0;
     }
@@ -19,9 +19,9 @@ export const ACTION_DELETE = {
     action: "delete"
 } as const;
 
-export const MODEL_TYPE = "model";
-export const ERROR_TYPE = "error";
-export const COLLECTION_TYPE = "collection";
+export const MODEL_TYPE = "model" as const;
+export const ERROR_TYPE = "error" as const;
+export const COLLECTION_TYPE = "collection" as const;
 
 // the order matters here, this is the order in which resources will be
 // created, initialized, and then syncronized in
@@ -36,7 +36,7 @@ export enum States {
     NONE = 0,
     DELETE = 1,
     KEEP = 2,
-    STALE = 3
+    STALE = 3,
 }
 
 export enum SystemErrorCodes {
@@ -44,4 +44,5 @@ export enum SystemErrorCodes {
     INVALID_REQUEST = "system.invalidRequest",
     CONNECTION_ERROR = "system.connectionError",
     DISCONNECT = "system.disconnect",
+    UNKNOWN = "system.unknownError",
 }

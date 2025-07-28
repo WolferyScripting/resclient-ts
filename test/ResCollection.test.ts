@@ -15,7 +15,7 @@ describe("ResCollection", () => {
         ]);
 
         models = new ResCollection(null, "services.models", {
-            idCallback: m => (m as { id: string; }).id
+            idCallback: (m: unknown): string => (m as { id: string; }).id
         });
         models.init([
             { id: 10, name: "Ten" },

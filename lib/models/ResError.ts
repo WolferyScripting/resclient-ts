@@ -1,3 +1,4 @@
+import { SystemErrorCodes } from "../Constants.js";
 import Properties from "../util/Properties.js";
 import { type ErrorData } from "../util/resgate.js";
 
@@ -19,8 +20,8 @@ export default class ResError extends Error {
             .define("rid", false, true, true, rid);
     }
 
-    init(err: Partial<ErrorData> & { data?: unknown; }) {
-        this.code = err.code || "system.unknownError";
+    init(err: Partial<ErrorData> & { data?: unknown; }): this {
+        this.code = err.code || SystemErrorCodes.UNKNOWN;
         this.data = err.data || "Unknown Error";
         this.message = err.message ?? "Unknown Error";
 
