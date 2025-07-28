@@ -7,7 +7,7 @@ export default class ResError extends Error {
     method?: string;
     override name = "ResError";
     params?: unknown;
-    rid: string;
+    rid!: string;
     constructor(rid: string, method?: string, params?: unknown) {
         super();
         Properties.of(this)

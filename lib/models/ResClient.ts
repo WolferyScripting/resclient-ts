@@ -84,7 +84,7 @@ export default class ResClient {
     namespace = "resclient";
     onConnect: OnConnectFunction | null = null;
     onConnectError: OnConnectErrorFunction | null = null;
-    protocol: number;
+    protocol!: number;
     requestID = 1;
     requests: Record<number, Request> = {};
     stale: Record<string, boolean> | null = null;
@@ -1095,7 +1095,7 @@ export default class ResClient {
         this.cache[rid] = ci;
 
         return ci.setPromise(
-            this._subscribe(ci, true).then(() => ci!.item)
+            this._subscribe(ci, true).then(() => ci.item)
         ) as Promise<T>;
     }
 

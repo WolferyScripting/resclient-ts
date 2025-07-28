@@ -8,9 +8,9 @@ export interface ResModelOptions {
 }
 export default class ResModel {
     protected _definition?: Record<string, PropertyDefinition>;
-    protected _props: Record<string, unknown>;
-    protected api: ResClient;
-    rid: string;
+    protected _props!: Record<string, unknown>;
+    protected api!: ResClient;
+    rid!: string;
     constructor(api: ResClient, rid: string, options?: ResModelOptions) {
         update(this, options ?? {}, {
             definition: { type: "?object", property: "_definition" }

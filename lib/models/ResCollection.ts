@@ -7,9 +7,9 @@ import Properties from "../util/Properties.js";
 export default class ResCollection<V = unknown> {
     private _idCallback?: (item: V) => string;
     private _list: Array<V> = [];
-    private _map: Record<string, V> | null;
-    protected api: ResClient;
-    rid: string;
+    private _map!: Record<string, V> | null;
+    protected api!: ResClient;
+    rid!: string;
     constructor(api: ResClient | null, rid: string, options?: { idCallback?(item: V): string; }) {
         options = copy(options ?? {}, {
             idCallback: { type: "?function" }

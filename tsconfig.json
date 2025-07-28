@@ -1,8 +1,30 @@
 {
-  "extends": "@uwu-codes/tsconfig/esm",
   "compilerOptions": {
-    "module": "ESNext"
+    "outDir": "dist",
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "target": "esnext",
+    "inlineSourceMap": true,
+    "importHelpers": true,
+    "newLine": "LF",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": false,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "NodeNext",
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+    "ignoreDeprecations": "5.0",
+    "checkJs": true,
+    "strictPropertyInitialization": true,
+    "strictBindCallApply": true,
+    "declaration": true,
+    "noEmitOnError": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
   },
-  "include": ["lib/**/*", "test/**/*", "jest.config.ts"],
+  "include": ["lib/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

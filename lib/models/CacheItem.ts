@@ -6,13 +6,13 @@ import Properties from "../util/Properties.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default class CacheItem<T extends ResModel | ResCollection | ResError = ResModel | ResCollection | ResError> {
-    private _unsubscribe: (ci: T) => void;
-    private _unsubscribeTimeout: NodeJS.Timeout | null;
+    private _unsubscribe!: (ci: T) => void;
+    private _unsubscribeTimeout!: NodeJS.Timeout | null;
     direct = 0;
     indirect = 0;
-    item: T;
+    item!: T;
     promise: Promise<any> | null = null;
-    rid: string;
+    rid!: string;
     subscribed = 0;
     type: ResourceType | null = null;
     constructor(rid: string, unsubscribe: (ci: CacheItem<T>) => void) {

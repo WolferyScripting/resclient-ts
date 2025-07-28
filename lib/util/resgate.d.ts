@@ -1,6 +1,6 @@
 // copy to dist
 import type { States, ACTION_DELETE } from "../Constants.js";
-import type CacheItem from "../models/CacheItem.js";
+import type CacheItem from "../models/CacheItem.ts";
 
 export interface RIDRef {
     rid: string;

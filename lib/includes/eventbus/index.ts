@@ -15,8 +15,8 @@ function rm (list: Array<{ handler: Function; target: object | null; }>, target:
 }
 
 class EventBus {
-    private _events: Record<string, Array<{ handler: Function; target: object | null; }>>;
-    private _queue: Array<[unknown, object | null, string, string | null, Function]> | null;
+    private _events!: Record<string, Array<{ handler: Function; target: object | null; }>>;
+    private _queue!: Array<[unknown, object | null, string, string | null, Function]> | null;
     constructor() {
         Properties.of(this)
             .readOnly("_events", {})

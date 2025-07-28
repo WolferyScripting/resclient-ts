@@ -5,8 +5,8 @@ import type ResModel from "./ResModel.js";
 import Properties from "../util/Properties.js";
 
 export default class ResRef<T = ResModel | ResCollection | ResError> {
-    private api: ResClient;
-    rid: string;
+    private api!: ResClient;
+    rid!: string;
     constructor(api: ResClient, rid: string) {
         Properties.of(this)
             .readOnly("api", api)
