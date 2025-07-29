@@ -28,7 +28,7 @@ export default class ResModel {
         return true;
     }
 
-    get cacheItem(): CacheItem<ResModel> {
+    protected get cacheItem(): CacheItem<ResModel> {
         return this.getClient().cache[this.rid] as CacheItem<ResModel>;
     }
 
@@ -52,9 +52,9 @@ export default class ResModel {
         return this;
     }
 
-    /** Add a direct dependency to this model's CacheItem, preventing it from being unsubscribed. */
+    /** Prevent this model from being unsubscribed. */
     keep(): void {
-        this.cacheItem.addDirect();
+        this.cacheItem.keep();
     }
 
     off(events: string | Array<string> | null, handler: AnyFunction): this {

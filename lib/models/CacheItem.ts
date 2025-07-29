@@ -70,6 +70,7 @@ export default class CacheItem<T extends AnyRes = AnyRes> {
     }
 
     keep(): this {
+        if (this.forceKeep) return this;
         this._onKeep?.(this);
         this.forceKeep = true;
         this.resetTimeout();
@@ -118,6 +119,7 @@ export default class CacheItem<T extends AnyRes = AnyRes> {
     }
 
     unkeep(): this {
+        if (!this.forceKeep) return this;
         this._onUnkeep?.(this);
         this.forceKeep = false;
         this.resetTimeout();
