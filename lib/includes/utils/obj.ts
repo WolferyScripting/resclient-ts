@@ -180,6 +180,105 @@ export const TYPES = {
             return JSON.parse(v) as AnyObject;
         }
     },
+    "array": {
+        default(): Array<unknown> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v)) {
+                throw new TypeError("Not an array");
+            }
+        },
+        fromString(v: string): Array<unknown> {
+            return JSON.parse(v) as Array<unknown>;
+        }
+    },
+    "?array": {
+        default(): Array<unknown> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v) && v !== null) {
+                throw new TypeError("Not an array or null");
+            }
+        },
+        fromString(v: string): Array<unknown> | null {
+            if (v === "null") {
+                return null;
+            }
+            return JSON.parse(v) as Array<unknown>;
+        }
+    },
+    "array[string]": {
+        default(): Array<string> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v)) {
+                throw new TypeError("Not an array");
+            }
+            if (!v.every(e => typeof e === "string")) {
+                throw new TypeError("Not all array elements are strings");
+            }
+        },
+        fromString(v: string): Array<string> {
+            return JSON.parse(v) as Array<string>;
+        }
+    },
+    "?array[string]": {
+        default(): Array<string> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v) && v !== null) {
+                throw new TypeError("Not an array or null");
+            }
+            if (v && !v.every(e => typeof e === "string")) {
+                throw new TypeError("Not all array elements are strings");
+            }
+        },
+        fromString(v: string): Array<string> | null {
+            if (v === "null") {
+                return null;
+            }
+            return JSON.parse(v) as Array<string>;
+        }
+    },
+    "array[number]": {
+        default(): Array<number> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v)) {
+                throw new TypeError("Not an array");
+            }
+            if (!v.every(e => typeof e === "number")) {
+                throw new TypeError("Not all array elements are numbers");
+            }
+        },
+        fromString(v: string): Array<number> {
+            return JSON.parse(v) as Array<number>;
+        }
+    },
+    "?array[number]": {
+        default(): Array<number> {
+            return [];
+        },
+        assert(v: unknown): void {
+            if (!Array.isArray(v) && v !== null) {
+                throw new TypeError("Not an array or null");
+            }
+            if (v && !v.every(e => typeof e === "number")) {
+                throw new TypeError("Not all array elements are numbers");
+            }
+        },
+        fromString(v: string): Array<number> | null {
+            if (v === "null") {
+                return null;
+            }
+            return JSON.parse(v) as Array<number>;
+        }
+    },
     "function": {
         // eslint-disable-next-line unicorn/consistent-function-scoping
         default(): () => void {
