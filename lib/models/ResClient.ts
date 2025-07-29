@@ -28,12 +28,13 @@ import type {
     Ref,
     Shared,
     RIDRef,
-    Refs
-} from "../util/resgate.js";
+    Refs,
+    AnyFunction,
+    AnyObject
+} from "../util/types.js";
 import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
-import { type AnyFunction, type AnyObject } from "../util/types.js";
 import lcsDiff from "../util/lcs-diff.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
@@ -74,7 +75,7 @@ export default class ResClient {
     private onMessage = this._onMessage.bind(this);
     private onOpen = this._onOpen.bind(this);
     private unsubscribe = this._unsubscribe.bind(this);
-    cache: Partial<Record<string, CacheItem>> = {};
+    cache: Record<string, CacheItem> = {};
     connectCallback: { reject(err: ErrorData): void; resolve(): void; } | null = null;
     connectPromise: Promise<void> | null = null;
     connected = false;
@@ -217,7 +218,7 @@ export default class ResClient {
                 // Remove item as stale if needed
                 this._removeStale(rid);
             } else {
-                ci = this.cache[rid] = new CacheItem(rid, this._unsubscribe.bind(this));
+                ci = this.cache[rid] = CacheItem.createDefault(rid, this);
             }
             // If an item is already set,
             // it has gone stale and needs to be synchronized.
@@ -992,12 +993,18 @@ export default class ResClient {
         }
     }
 
-    get<T = ResModel | ResCollection<unknown> | ResError>(rid: string): Promise<T> {
-        return this.subscribe(rid).then(() => this.getCached<T>(rid)!);
+    async get<T = ResModel | ResCollection<unknown> | ResError>(rid: string, forceKeep = false): Promise<T> {
+        return this.subscribe(rid, forceKeep).then(() => this.getCached<T>(rid)!);
     }
 
     getCached<T = ResModel | ResCollection<unknown> | ResError>(rid: string): T | null {
         return this.cache[rid]?.item as T ?? null;
+    }
+
+    keepCached(item: CacheItem, cb = false): void {
+        if (item.forceKeep) return;
+        if (!cb) item.keep();
+        item.resetTimeout();
     }
 
     off(handler: AnyFunction): this;
@@ -1065,17 +1072,25 @@ export default class ResClient {
         return this;
     }
 
-    async subscribe(rid: string): Promise<void> {
+    async subscribe(rid: string, forceKeep = false): Promise<void> {
         let ci = this.cache[rid];
         if (ci) {
             if (ci.promise) await ci.promise;
             ci.resetTimeout();
+            if (forceKeep) ci.keep();
             return;
         }
 
-        ci = new CacheItem(rid, this.unsubscribe);
+        ci = CacheItem.createDefault(rid, this);
         this.cache[rid] = ci;
+        if (forceKeep) ci.keep();
         return ci.setPromise(this._subscribe(ci, true));
+    }
+
+    unkeepCached(item: CacheItem, cb = false): void {
+        if (!item.forceKeep) return;
+        if (!cb) item.unkeep();
+        item.resetTimeout();
     }
 
     unregisterCollectionType(pattern: string): this {

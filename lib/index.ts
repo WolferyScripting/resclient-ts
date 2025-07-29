@@ -8,7 +8,7 @@ export type * from "./models/ResModel.js";
 export { default as ResRef } from "./models/ResRef.js";
 export { default as TypeList } from "./models/TypeList.js";
 export type * from "./models/TypeList.js";
-export type * from "./util/resgate.js";
+export type * from "./util/types.js";
 export * from "./Constants.js";
 export { default as eventBus, EventBus } from "./includes/eventbus/index.js";
 export * from "./includes/utils/obj.js";

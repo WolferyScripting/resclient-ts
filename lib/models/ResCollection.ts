@@ -1,4 +1,5 @@
 import type ResClient from "./ResClient.js";
+import type CacheItem from "./CacheItem.js";
 import { copy } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
 import { type AnyObject, type AnyFunction } from "../util/types.js";
@@ -23,6 +24,11 @@ export default class ResCollection<V = unknown, C extends ResClient = ResClient>
         if (!this._idCallback) {
             throw new Error("No id callback defined");
         }
+    }
+
+    /** Add a direct dependency to this collection's CacheItem, preventing it from being unsubscribed. */
+    get cacheItem(): CacheItem<ResCollection> {
+        return this.getClient().cache[this.rid] as CacheItem<ResCollection>;
     }
 
     /** If this collection is empty. */
@@ -125,6 +131,15 @@ export default class ResCollection<V = unknown, C extends ResClient = ResClient>
 
     getClient(): C {
         return this.api;
+    }
+
+    getOrThrow(id: string | number): V {
+        const item = this.get(id);
+        if (item === undefined) {
+            throw new TypeError(`${id} not found in ${this.rid}`);
+        }
+
+        return item;
     }
 
     indexOf(item: V): number {

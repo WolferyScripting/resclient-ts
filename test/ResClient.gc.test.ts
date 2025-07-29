@@ -1,8 +1,7 @@
 import { States } from "../lib/Constants.js";
-import { type Ref } from "../lib/util/resgate.js";
+import type { Ref, AnyObject } from "../lib/util/types.js";
 import type CacheItem from "../lib/models/CacheItem.js";
 import ResClient from "../lib/models/ResClient.js";
-import { type AnyObject } from "../lib/util/types.js";
 import { expect } from "chai";
 
 

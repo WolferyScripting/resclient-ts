@@ -48,3 +48,5 @@ export interface Ref {
 }
 
 export type Refs = Exclude<Shared[keyof Shared], undefined>;
+
+export type AnyRes = ResModel | ResCollection | ResError;

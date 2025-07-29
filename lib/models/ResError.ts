@@ -1,6 +1,6 @@
 import { SystemErrorCodes } from "../Constants.js";
 import Properties from "../util/Properties.js";
-import { type ErrorData } from "../util/resgate.js";
+import type { ErrorData } from "../util/types.js";
 
 export default class ResError extends Error {
     code?: string;

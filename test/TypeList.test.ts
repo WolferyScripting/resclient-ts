@@ -1,11 +1,12 @@
-import { expect } from "chai";
+/* eslint-disable unicorn/consistent-function-scoping */
 import TypeList from "../lib/models/TypeList.js";
+import { expect } from "chai";
 
 describe("TypeList", () => {
     let typeList: TypeList;
-    const defaultFactory = () => {};
-    const fa = () => {};
-    const fb = () => {};
+    const defaultFactory = (): void => {};
+    const fa = (): void => {};
+    const fb = (): void => {};
 
     beforeEach(() => {
         typeList = new TypeList(defaultFactory);

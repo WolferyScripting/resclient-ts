@@ -1,4 +1,5 @@
 import type ResClient from "./ResClient.js";
+import type CacheItem from "./CacheItem.js";
 import { copy, equal, update, type PropertyDefinition } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
 import { type AnyFunction, type AnyObject } from "../util/types.js";
@@ -27,6 +28,10 @@ export default class ResModel {
         return true;
     }
 
+    get cacheItem(): CacheItem<ResModel> {
+        return this.getClient().cache[this.rid] as CacheItem<ResModel>;
+    }
+
     auth<T = unknown>(method: string, params: unknown): Promise<T> {
         return this.api.authenticate<T>(this.rid, method, params);
     }
@@ -45,6 +50,11 @@ export default class ResModel {
         }
 
         return this;
+    }
+
+    /** Add a direct dependency to this model's CacheItem, preventing it from being unsubscribed. */
+    keep(): void {
+        this.cacheItem.addDirect();
     }
 
     off(events: string | Array<string> | null, handler: AnyFunction): this {
