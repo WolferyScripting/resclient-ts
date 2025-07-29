@@ -1,6 +1,6 @@
 {
   "name": "resclient-ts",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A RES client written in typescript.",
   "packageManager": "pnpm@9.6.0",
   "types": "./dist/index.d.ts",
@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && cp lib/util/resgate.d.ts dist/util/",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && cp lib/util/types.d.ts dist/util/",
     "lint": "eslint lib",
     "test": "c8 mocha",
     "coverage": "c8 report --reporter=text-lcov | coveralls",
