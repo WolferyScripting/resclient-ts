@@ -125,4 +125,9 @@ export default class CacheItem<T extends AnyRes = AnyRes> {
         this.resetTimeout();
         return this;
     }
+
+    unsubscribe(): void {
+        if (this._unsubscribeTimeout) clearTimeout(this._unsubscribeTimeout);
+        this._unsubscribe(this);
+    }
 }
