@@ -30,7 +30,8 @@ import type {
     RIDRef,
     Refs,
     AnyFunction,
-    AnyObject
+    AnyObject,
+    AnyRes
 } from "../util/types.js";
 import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
@@ -993,12 +994,22 @@ export default class ResClient {
         }
     }
 
-    async get<T = ResModel | ResCollection<unknown> | ResError>(rid: string, forceKeep = false): Promise<T> {
+    async get<T extends AnyRes = AnyRes>(rid: string, forceKeep = false): Promise<T> {
         return this.subscribe(rid, forceKeep).then(() => this.getCached<T>(rid)!);
     }
 
-    getCached<T = ResModel | ResCollection<unknown> | ResError>(rid: string): T | null {
+    getCached<T extends AnyRes = AnyRes>(rid: string): T | null {
         return this.cache[rid]?.item as T ?? null;
+    }
+
+    async getPaginated<T extends ResModel = ResModel>(rid: string, offset: number, limit: number): Promise<Array<T>> {
+        rid = `${rid}?offset=${offset}&limit=${limit}`;
+        const ci = CacheItem.createDefault(rid, this);
+        this.cache[rid] = ci;
+        await ci.setPromise(this._subscribe(ci, true));
+        const items = (ci.item as unknown as ResCollection<T>).toArray();
+        ci.unsubscribe();
+        return items;
     }
 
     keepCached(item: CacheItem, cb = false): void {

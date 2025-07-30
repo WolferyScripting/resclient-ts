@@ -4,13 +4,13 @@ import { copy } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
 import { type AnyObject, type AnyFunction } from "../util/types.js";
 
-export default class ResCollection<V = unknown, C extends ResClient = ResClient> {
+export default class ResCollection<V = unknown> {
     private _idCallback?: (item: V) => string;
     private _list: Array<V> = [];
     private _map!: Record<string, V> | null;
-    protected api!: C;
+    protected api!: ResClient;
     rid!: string;
-    constructor(api: C | null, rid: string, options?: { idCallback?(item: V): string; }) {
+    constructor(api: ResClient, rid: string, options?: { idCallback?(item: V): string; }) {
         options = copy(options ?? {}, {
             idCallback: { type: "?function" }
         });
@@ -129,7 +129,7 @@ export default class ResCollection<V = unknown, C extends ResClient = ResClient>
         return this._map![id];
     }
 
-    getClient(): C {
+    getClient(): ResClient {
         return this.api;
     }
 

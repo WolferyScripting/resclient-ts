@@ -1,10 +1,8 @@
 import type ResClient from "./ResClient.js";
-import type ResCollection from "./ResCollection.js";
-import type ResError from "./ResError.js";
-import type ResModel from "./ResModel.js";
 import Properties from "../util/Properties.js";
+import { type AnyRes } from "../util/types.js";
 
-export default class ResRef<T = ResModel | ResCollection | ResError> {
+export default class ResRef<T extends AnyRes = AnyRes> {
     private api!: ResClient;
     rid!: string;
     constructor(api: ResClient, rid: string) {
