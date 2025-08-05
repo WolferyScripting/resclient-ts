@@ -1,12 +1,14 @@
 import ResCollection from "../lib/models/ResCollection.js";
+import type ResClient from "../lib/models/ResClient.js";
 import { expect } from "chai";
 
+const api = null as unknown as ResClient;
 describe("ResCollection", () => {
     let primitives: ResCollection;
     let models: ResCollection;
 
     beforeEach(() => {
-        primitives = new ResCollection(null, "service.primitives");
+        primitives = new ResCollection(api, "service.primitives");
         primitives.init([
             "Ten",
             "Twenty",
@@ -14,7 +16,7 @@ describe("ResCollection", () => {
             null
         ]);
 
-        models = new ResCollection(null, "services.models", {
+        models = new ResCollection(api, "services.models", {
             idCallback: (m: unknown): string => (m as { id: string; }).id
         });
         models.init([

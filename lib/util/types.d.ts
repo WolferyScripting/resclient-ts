@@ -8,6 +8,8 @@ import type ResModel from "../models/ResModel.ts";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyFunction = (...args: Array<any>) => any;
 export type AnyObject<T = unknown> = Record<string, T>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyClass<T = unknown> = new (...args: Array<any>) => T;
 
 export interface RIDRef {
     rid: string;

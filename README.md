@@ -52,9 +52,9 @@ client.get("example.mymodel").then(model => {
     };
 
     // Listen to changes for 5 seconds, eventually unsubscribing
-    model.on("change", onChange);
+    model.resourceOn("change", onChange);
     setTimeout(() => {
-        model.off("change", onChange);
+        model.resourceOff("change", onChange);
     }, 5000);
 });
 ```

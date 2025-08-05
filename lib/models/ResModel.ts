@@ -2,7 +2,7 @@ import type ResClient from "./ResClient.js";
 import type CacheItem from "./CacheItem.js";
 import { copy, equal, update, type PropertyDefinition } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
-import { type AnyFunction, type AnyObject } from "../util/types.js";
+import type { AnyFunction, AnyObject } from "../util/types.js";
 
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
@@ -16,7 +16,7 @@ export default class ResModel {
         update(this, options ?? {}, {
             definition: { type: "?object", property: "_definition" }
         });
-        Properties.of(this)
+        this.p
             .writable("_definition")
             .readOnly("_props", {})
             .readOnly("api", api)
@@ -32,12 +32,25 @@ export default class ResModel {
         return this.getClient().cache[this.rid] as CacheItem<ResModel>;
     }
 
+    protected get p(): Properties {
+        return Properties.of(this);
+    }
+
+    get props(): AnyObject {
+        return this._props;
+    }
+
     auth<T = unknown>(method: string, params: unknown): Promise<T> {
         return this.api.authenticate<T>(this.rid, method, params);
     }
 
     call<T = unknown>(method: string, params?: unknown): Promise<T> {
         return this.api.call<T>(this.rid, method, params);
+    }
+
+    /** Called when the model is deleted. */
+    dispose(): void {
+        // noop
     }
 
     getClient(): ResClient {
@@ -58,11 +71,21 @@ export default class ResModel {
     }
 
     off(events: string | Array<string> | null, handler: AnyFunction): this {
-        this.api.resourceOff(this.rid, events, handler);
+        this.api.eventBus.off(this, events, handler);
         return this;
     }
 
     on(events: string | Array<string> | null, handler: AnyFunction): this {
+        this.api.eventBus.on(this, events, handler);
+        return this;
+    }
+
+    resourceOff(events: string | Array<string> | null, handler: AnyFunction): this {
+        this.api.resourceOff(this.rid, events, handler);
+        return this;
+    }
+
+    resourceOn(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOn(this.rid, events, handler);
         return this;
     }

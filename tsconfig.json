@@ -26,11 +26,6 @@
     "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": [
-    "lib/**/*",
-    "test/**/*",
-    "local/ResClient.testd.ts",
-    "local/mock-socket.d.ts"
-  ],
+  "include": ["lib/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

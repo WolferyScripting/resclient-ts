@@ -31,12 +31,13 @@ import type {
     Refs,
     AnyFunction,
     AnyObject,
-    AnyRes
+    AnyRes,
+    AnyClass
 } from "../util/types.js";
 import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
-import lcsDiff from "../util/lcs-diff.js";
+import { lcsDiff } from "../util/util.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
 
@@ -57,14 +58,13 @@ export interface Request {
 }
 
 export function getRID(v: unknown): string | null {
-    if (typeof v === "object" && v !== null) {
-        if ("getResourceID" in v && typeof v.getResourceID === "function") {
-            return v.getResourceID() as string;
-        }
-        if ("rid" in v && typeof v.rid === "string") {
-            return v.rid;
-        }
+    if (typeof v === "object" && v !== null && "getResourceID" in v && typeof v.getResourceID === "function") {
+        return v.getResourceID() as string;
     }
+    // checking for the rid property causes ResRef to be processed as a regular cacheItem in change events
+    /* if ("rid" in v && typeof v.rid === "string") {
+            return v.rid;
+        } */
 
     return null;
 }
@@ -240,12 +240,12 @@ export default class ResClient {
         return sync;
     }
 
-    private _deleteRef(ci: CacheItem<ResCollection>): void {
+    private _deleteRef(ci: CacheItem<AnyRes>): void {
         const item = ci.item;
-        let ri: CacheItem | null;
+        let ri: CacheItem | null = null;
         switch (ci.type) {
             case COLLECTION_TYPE: {
-                for (const v of item) {
+                for (const v of item as ResCollection) {
                     ri = this._getRefItem(v);
                     if (ri) {
                         ri.addIndirect(-1);
@@ -265,6 +265,7 @@ export default class ResClient {
                 break;
             }
         }
+
         delete this.cache[ci.rid];
         this._removeStale(ci.rid);
     }
@@ -995,24 +996,36 @@ export default class ResClient {
     }
 
     async get<T extends AnyRes = AnyRes>(rid: string, forceKeep = false): Promise<T> {
+        Debug("client:get", `${rid}${forceKeep ? " (keep)" : ""}`);
         return this.subscribe(rid, forceKeep).then(() => this.getCached<T>(rid)!);
     }
 
     getCached<T extends AnyRes = AnyRes>(rid: string): T | null {
+        Debug("client:getCached", rid);
         return this.cache[rid]?.item as T ?? null;
     }
 
     async getPaginated<T extends ResModel = ResModel>(rid: string, offset: number, limit: number): Promise<Array<T>> {
         rid = `${rid}?offset=${offset}&limit=${limit}`;
+        Debug("client:getPaginated", rid);
         const ci = CacheItem.createDefault(rid, this);
         this.cache[rid] = ci;
         await ci.setPromise(this._subscribe(ci, true));
-        const items = (ci.item as unknown as ResCollection<T>).toArray();
+        const item = ci.item as unknown as ResCollection | ResModel;
+        let items: Array<T>;
+        if (item instanceof ResModel) {
+            items = Object.values(item.props as Record<string, T>);
+        } else if (item instanceof ResCollection) {
+            items = item.list as Array<T>;
+        } else {
+            assert(false, `Invalid resource type for paginated request: ${(item as AnyClass).constructor.name}`);
+        }
         ci.unsubscribe();
         return items;
     }
 
     keepCached(item: CacheItem, cb = false): void {
+        Debug("client:keepCached", item.rid);
         if (item.forceKeep) return;
         if (!cb) item.keep();
         item.resetTimeout();
@@ -1043,6 +1056,7 @@ export default class ResClient {
     }
 
     resourceOff(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
+        Debug("client:resourceOff", rid);
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
@@ -1053,6 +1067,7 @@ export default class ResClient {
     }
 
     resourceOn(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
+        Debug("client:resourceOn", rid);
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
@@ -1084,6 +1099,7 @@ export default class ResClient {
     }
 
     async subscribe(rid: string, forceKeep = false): Promise<void> {
+        Debug("client:subscribe", `${rid}${forceKeep ? " (keep)" : ""}`);
         let ci = this.cache[rid];
         if (ci) {
             if (ci.promise) await ci.promise;
@@ -1099,6 +1115,7 @@ export default class ResClient {
     }
 
     unkeepCached(item: CacheItem, cb = false): void {
+        Debug("client:unkeepCached", item.rid);
         if (!item.forceKeep) return;
         if (!cb) item.unkeep();
         item.resetTimeout();

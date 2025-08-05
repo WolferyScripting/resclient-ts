@@ -6,9 +6,13 @@ export default class ResRef<T extends AnyRes = AnyRes> {
     private api!: ResClient;
     rid!: string;
     constructor(api: ResClient, rid: string) {
-        Properties.of(this)
+        this.p
             .readOnly("api", api)
             .define("rid", false, true, true, rid);
+    }
+
+    protected get p(): Properties {
+        return Properties.of(this);
     }
 
     equals(o: ResRef): boolean {

@@ -14,7 +14,7 @@ export default class ResCollection<V = unknown> {
         options = copy(options ?? {}, {
             idCallback: { type: "?function" }
         });
-        Properties.of(this)
+        this.p
             .writableBulk(["_idCallback", options?.idCallback?.bind(this)], "_list", ["_map", options.idCallback ? {} : null])
             .readOnly("api", api)
             .define("rid", false, true, true, rid);
@@ -26,7 +26,10 @@ export default class ResCollection<V = unknown> {
         }
     }
 
-    /** Add a direct dependency to this collection's CacheItem, preventing it from being unsubscribed. */
+    protected get p(): Properties {
+        return Properties.of(this);
+    }
+
     get cacheItem(): CacheItem<ResCollection> {
         return this.getClient().cache[this.rid] as CacheItem<ResCollection>;
     }
@@ -74,6 +77,11 @@ export default class ResCollection<V = unknown> {
 
     call<T = unknown>(method: string, params: unknown): Promise<T> {
         return this.api.call<T>(this.rid, method, params);
+    }
+
+    /** Called when the collection is deleted. */
+    dispose(): void {
+        // noop
     }
 
     /** See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every | Array#every } */
@@ -193,12 +201,12 @@ export default class ResCollection<V = unknown> {
     }
 
     off(events: string | Array<string> | null, handler: AnyFunction): this {
-        this.api.resourceOff(this.rid, events, handler);
+        this.api.eventBus.off(this, events, handler);
         return this;
     }
 
     on(events: string | Array<string> | null, handler: AnyFunction): this {
-        this.api.resourceOn(this.rid, events, handler);
+        this.api.eventBus.on(this, events, handler);
         return this;
     }
 
@@ -241,6 +249,16 @@ export default class ResCollection<V = unknown> {
         }
 
         return item;
+    }
+
+    resourceOff(events: string | Array<string> | null, handler: AnyFunction): this {
+        this.api.resourceOff(this.rid, events, handler);
+        return this;
+    }
+
+    resourceOn(events: string | Array<string> | null, handler: AnyFunction): this {
+        this.api.resourceOn(this.rid, events, handler);
+        return this;
     }
 
     /** See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some | Array#some } */

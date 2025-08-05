@@ -20,6 +20,10 @@ export default class ResError extends Error {
             .define("rid", false, true, true, rid);
     }
 
+    dispose(): void {
+        // noop
+    }
+
     init(err: Partial<ErrorData> & { data?: unknown; }): this {
         this.code = err.code || SystemErrorCodes.UNKNOWN;
         this.data = err.data || "Unknown Error";

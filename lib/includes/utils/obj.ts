@@ -304,9 +304,13 @@ export const TYPES = {
         fromString(_v: unknown): void {} // Evaluating functions from strings is not allowed
 
     }
-};
+} satisfies Record<string, TypeDefinition>;
 
-
+export interface TypeDefinition {
+    assert(val: unknown): void;
+    default(): unknown;
+    fromString(val: string): unknown;
+}
 export interface PropertyDefinition {
     default?: unknown;
     property?: string;

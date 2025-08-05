@@ -13,5 +13,5 @@ export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>):
             Object.defineProperty(arg0, s, { enumerable: false });
         }
     }
-    return debug ? debug(`resclient:${namspace}`)(formatWithOptions({ colors: true, showHidden: false }, arg0, ...args)) : undefined;
+    return debug ? debug(`resclient:${namspace}`)(formatWithOptions({ colors: true, showHidden: false, depth: 2 }, arg0, ...args)) : undefined;
 }

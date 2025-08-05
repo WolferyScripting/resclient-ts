@@ -1,6 +1,22 @@
 import { equal } from "../includes/utils/obj.js";
+import type ResModel from "../models/ResModel.js";
+import type ResCollectionModel from "../models/ResCollectionModel.js";
+import type ResRef from "../models/ResRef.js";
 
-export default function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => void, onAdd: (item: T, aIndex: number, bIndex: number) => void, onRemove: (item: T, aIndex: number, idx: number) => void): void {
+export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionModel<T>, changes: Record<string, T | undefined>): Record<"added" | "removed", Array<T>> {
+    const added: Array<string> = [], removed: Array<T> = [];
+
+    for (const [key, value] of Object.entries(changes)) {
+        if (value === undefined) {
+            added.push(key);
+        } else {
+            removed.push(value);
+        }
+    }
+    return { added: added.map(key => model.props[key] as T), removed };
+}
+
+export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => void, onAdd: (item: T, aIndex: number, bIndex: number) => void, onRemove: (item: T, aIndex: number, idx: number) => void): void {
     // Do a LCS matric calculation
     // https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
     let start = 0;
