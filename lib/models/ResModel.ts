@@ -109,6 +109,11 @@ export default class ResModel {
         return o;
     }
 
+    /** Undo preventing this model from being unsubscribed. */
+    unkeep(): void {
+        this.cacheItem.unkeep();
+    }
+
     update(props: AnyObject, reset = false): AnyObject | null {
         if (!props) {
             return null;

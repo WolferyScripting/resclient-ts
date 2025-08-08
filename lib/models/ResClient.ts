@@ -183,7 +183,10 @@ export default class ResClient {
         const rr =  (t: typeof RESOURCE_TYPES[number]): Refs => ({ collection: r.collections, model: r.models, error: r.errors }[t]!);
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => (sync[t] = this._createItems(rr(t), this.types[t])! as never));
-        await Promise.all(RESOURCE_TYPES.map(t => this._initItems(rr(t), this.types[t])));
+        // must be initialized in specific order
+        for (const type of RESOURCE_TYPES) {
+            await this._initItems(rr(type), this.types[type]);
+        }
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => this._syncItems(sync[t], this.types[t]));
 
@@ -483,9 +486,9 @@ export default class ResClient {
     }
 
     private async _handleUnsubscribeEvent(ci: CacheItem): Promise<boolean> {
+        await ci.item.dispose();
         ci.addSubscribed(0);
         this._tryDelete(ci);
-        await ci.item.dispose();
         this.eventBus.emit(ci.item, `${this.namespace}.resource.${ci.rid}.unsubscribe`, { item: ci.item });
         return true;
     }
@@ -495,11 +498,13 @@ export default class ResClient {
             return;
         }
 
+        const promises: Array<Promise<AnyRes>> = [];
         for (const rid of Object.keys(refs)) {
             const cacheItem = this.cache[rid];
             assert(cacheItem, `Missing CacheItem (rid: ${rid})`);
-            await cacheItem.item.init(type.prepareData(refs[rid] as never) as never);
+            promises.push(cacheItem.item.init(type.prepareData(refs[rid] as never) as never));
         }
+        await Promise.all(promises);
     }
 
     // @FIXME: this is a mess
