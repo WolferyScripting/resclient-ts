@@ -39,10 +39,13 @@ export enum States {
     STALE = 3,
 }
 
-export enum SystemErrorCodes {
+export enum ErrorCodes {
     // System
     INVALID_REQUEST = "system.invalidRequest",
     CONNECTION_ERROR = "system.connectionError",
     DISCONNECT = "system.disconnect",
     UNKNOWN = "system.unknownError",
+
+    // Common
+    TOO_ACTIVE = "common.tooActive",
 }

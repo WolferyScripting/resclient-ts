@@ -40,13 +40,13 @@ export default class ResCollectionModel<T extends ResModel | ResRef = ResModel |
         return Object.values(this.props as Record<string, T>);
     }
 
-    override dispose(): void {
-        super.dispose();
+    override async dispose(): Promise<void> {
+        await super.dispose();
         this.resourceOff("change", this.onChange);
     }
 
-    override init(data?: AnyObject | undefined): this {
-        super.init(data);
+    override async init(data?: AnyObject | undefined): Promise<this> {
+        await super.init(data);
         this.resourceOn("change", this.onChange);
         return this;
     }

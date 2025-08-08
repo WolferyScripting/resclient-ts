@@ -18,7 +18,7 @@ import {
     CURRENT_PROTOCOL,
     RECONNECT_DELAY,
     SUBSCRIBE_STALE_DELAY,
-    SystemErrorCodes
+    ErrorCodes
 } from "../Constants.js";
 import type {
     AddEventData,
@@ -48,6 +48,7 @@ export interface ClientOptions {
     namespace?: string;
     onConnect?: OnConnectFunction;
     onConnectError?: OnConnectErrorFunction;
+    retryOnTooActive?: boolean;
 }
 
 export interface Request {
@@ -69,7 +70,15 @@ export function getRID(v: unknown): string | null {
     return null;
 }
 
-export type ResType = ResClient["types"][keyof ResClient["types"]];
+export interface ResType<K extends string, T extends AnyRes = AnyRes, D = unknown> {
+    id: K;
+    list: TypeList<T>;
+    getFactory(rid: string): ItemFactory<T>;
+    prepareData(data: unknown): D;
+    synchronize(cacheItem: CacheItem<T>, data: unknown): unknown;
+}
+
+export type AnyResType = ResClient["types"][keyof ResClient["types"]];
 export default class ResClient {
     private onClose = this._onClose.bind(this);
     private onError = this._onError.bind(this);
@@ -87,6 +96,7 @@ export default class ResClient {
     protocol!: number;
     requestID = 1;
     requests: Record<number, Request> = {};
+    retryOnTooActive = false;
     stale: Record<string, boolean> | null = null;
     tryConnect = false;
     types = {
@@ -98,17 +108,17 @@ export default class ResClient {
                 return this.list.getFactory(rid);
             },
             synchronize: this._syncCollection.bind(this)
-        },
+        } satisfies ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>> as ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>>,
         error: {
             id:          ERROR_TYPE,
+            list:        new TypeList((api, rid) => new ResError(api, rid)),
             prepareData: (data: unknown): unknown => data,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            getFactory(_rid: string): ItemFactory<ResError> {
-                return (api: ResClient, rid: string): ResError => new ResError(rid);
+            getFactory(rid: string): ItemFactory<ResError> {
+                return this.list.getFactory(rid);
             },
             // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
             synchronize(cacheItem: CacheItem<ResError>, data: Array<RIDRef>): void {}
-        },
+        } satisfies ResType<typeof ERROR_TYPE, ResError, unknown> as ResType<typeof ERROR_TYPE, ResError, unknown>,
         model: {
             id:          MODEL_TYPE,
             list:        new TypeList((api, rid) => new ResModel(api, rid)),
@@ -124,7 +134,7 @@ export default class ResClient {
                 return this.list.getFactory(rid);
             },
             synchronize: this._syncModel.bind(this)
-        }
+        } satisfies ResType<typeof MODEL_TYPE, ResModel, AnyObject> as ResType<typeof MODEL_TYPE, ResModel, AnyObject>
     };
     ws: WebSocket | null = null;
     wsFactory: (() => WebSocket);
@@ -146,6 +156,10 @@ export default class ResClient {
             this.onConnectError = options.onConnectError;
         }
 
+        if (options.retryOnTooActive !== undefined) {
+            this.retryOnTooActive = options.retryOnTooActive;
+        }
+
         this.wsFactory = typeof hostUrlOrFactory === "string" ? (): WebSocket => new WebSocket(hostUrlOrFactory) : hostUrlOrFactory;
 
         Properties.of(this)
@@ -160,7 +174,7 @@ export default class ResClient {
         this.stale[rid] = true;
     }
 
-    private _cacheResources(r: Shared): void {
+    private async _cacheResources(r: Shared): Promise<void> {
         if (!r || !(r.models || r.collections || r.errors)) {
             return;
         }
@@ -169,18 +183,17 @@ export default class ResClient {
         const rr =  (t: typeof RESOURCE_TYPES[number]): Refs => ({ collection: r.collections, model: r.models, error: r.errors }[t]!);
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => (sync[t] = this._createItems(rr(t), this.types[t])! as never));
-        // eslint-disable-next-line unicorn/no-array-for-each
-        RESOURCE_TYPES.forEach(t => this._initItems(rr(t), this.types[t]));
+        await Promise.all(RESOURCE_TYPES.map(t => this._initItems(rr(t), this.types[t])));
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => this._syncItems(sync[t], this.types[t]));
 
     }
 
-    private _call<T = unknown>(type: string, rid: string, method?: string, params?: unknown): Promise<T> {
+    private async _call<T = unknown>(type: string, rid: string, method?: string, params?: unknown): Promise<T> {
         return this._send<{ payload: T; rid?: string; }>(type, rid, method || "", params)
-            .then(result => {
+            .then(async result => {
                 if (result.rid) {
-                    this._cacheResources(result as never);
+                    await this._cacheResources(result as never);
                     const ci = this.cache[result.rid];
                     assert(ci, `Missing CacheItem (rid: ${result.rid})`);
                     ci.addSubscribed(1);
@@ -207,7 +220,7 @@ export default class ResClient {
         }
     }
 
-    private _createItems(refs: Refs, type: ResType): AnyObject | undefined {
+    private _createItems(refs: Refs, type: AnyResType): AnyObject | undefined {
         if (!refs) {
             return;
         }
@@ -301,12 +314,12 @@ export default class ResClient {
         return refs;
     }
 
-    private _handleAddEvent(ci: CacheItem<ResCollection>, event: string, data: AddEventData): boolean {
+    private async _handleAddEvent(ci: CacheItem<ResCollection>, event: string, data: AddEventData): Promise<boolean> {
         if (ci.type !== COLLECTION_TYPE) {
             return false;
         }
 
-        this._cacheResources(data);
+        await this._cacheResources(data);
         const v = this._prepareValue(data.value, true);
         const idx = data.idx;
 
@@ -315,12 +328,12 @@ export default class ResClient {
         return true;
     }
 
-    private _handleChangeEvent(cacheItem: CacheItem<ResModel>, event: string, data: ChangeEventData, reset: boolean): boolean {
+    private async _handleChangeEvent(cacheItem: CacheItem<ResModel>, event: string, data: ChangeEventData, reset: boolean): Promise<boolean> {
         if (cacheItem.type !== MODEL_TYPE) {
             return false;
         }
 
-        this._cacheResources(data);
+        await this._cacheResources(data);
 
         const item = cacheItem.item;
         let rid;
@@ -361,7 +374,7 @@ export default class ResClient {
         return true;
     }
 
-    private _handleErrorResponse(req: Request, data: unknown): void {
+    private async _handleErrorResponse(req: Request, data: unknown): Promise<void> {
         const m = req.method;
         // Extract the rid if possible
         let rid = "";
@@ -376,16 +389,26 @@ export default class ResClient {
                 }
             }
         }
-        const err = new ResError(rid.trim(), m, req.params).init((data as Record<"error", Record<string, string>>).error);
-        try {
-            this._emit("error", err);
-        } catch {}
+        const errorData = (data as Record<"error", ErrorData & { data?: unknown; }>).error;
+        if (this.retryOnTooActive && "code" in errorData && errorData.code === ErrorCodes.TOO_ACTIVE) {
+            const seconds = (Number((errorData.data as { seconds: number; } | undefined)?.seconds) || 0) + 1;
+            Debug("tooActive", `Got ${ErrorCodes.TOO_ACTIVE}, waiting ${seconds} second${seconds === 1 ? "" : "s"} to retry ${req.method}`);
+            await new Promise(resolve => setTimeout(resolve, seconds * 1000)); // can't import timers/promises due to other non-async usages
+            const r = await this._sendNow(req.method, req.params);
+            req.resolve(r);
+            return;
+        } else {
+            const err = await (new ResError(this, rid.trim(), m, req.params)).init(errorData);
+            try {
+                this._emit("error", err);
+            } catch {}
 
-        // Execute error callback bound to calling object
-        req.reject(err);
+            // Execute error callback bound to calling object
+            req.reject(err);
+        }
     }
 
-    private _handleEvent(data: { data: unknown; event: string; }): void {
+    private async _handleEvent(data: { data: unknown; event: string; }): Promise<void> {
         // Event
         const index = data.event.lastIndexOf(".");
         if (index === -1 || index === data.event.length - 1) {
@@ -403,22 +426,22 @@ export default class ResClient {
         let handled = false;
         switch (event) {
             case "change": {
-                handled = this._handleChangeEvent(cacheItem as CacheItem<ResModel>, event, data.data as ChangeEventData, false);
+                handled = await this._handleChangeEvent(cacheItem as CacheItem<ResModel>, event, data.data as ChangeEventData, false);
                 break;
             }
 
             case "add": {
-                handled = this._handleAddEvent(cacheItem as CacheItem<ResCollection>, event, data.data as AddEventData);
+                handled = await this._handleAddEvent(cacheItem as CacheItem<ResCollection>, event, data.data as AddEventData);
                 break;
             }
 
             case "remove": {
-                handled = this._handleRemoveEvent(cacheItem as CacheItem<ResCollection>, event, data.data as RemoveEventData);
+                handled = await this._handleRemoveEvent(cacheItem as CacheItem<ResCollection>, event, data.data as RemoveEventData);
                 break;
             }
 
             case "unsubscribe": {
-                handled = this._handleUnsubscribeEvent(cacheItem);
+                handled = await this._handleUnsubscribeEvent(cacheItem);
                 break;
             }
         }
@@ -433,7 +456,7 @@ export default class ResClient {
         this._tryDelete(ci);
     }
 
-    private _handleRemoveEvent(ci: CacheItem<ResCollection>, event: string, data: RemoveEventData): boolean {
+    private async _handleRemoveEvent(ci: CacheItem<ResCollection>, event: string, data: RemoveEventData): Promise<boolean> {
         if (ci.type !== COLLECTION_TYPE) {
             return false;
         }
@@ -455,18 +478,19 @@ export default class ResClient {
         return true;
     }
 
-    private _handleSuccessResponse(req: Request, data: unknown): void {
+    private async _handleSuccessResponse(req: Request, data: unknown): Promise<void> {
         req.resolve((data as Record<"result", unknown>).result);
     }
 
-    private _handleUnsubscribeEvent(ci: CacheItem): boolean {
+    private async _handleUnsubscribeEvent(ci: CacheItem): Promise<boolean> {
         ci.addSubscribed(0);
         this._tryDelete(ci);
+        await ci.item.dispose();
         this.eventBus.emit(ci.item, `${this.namespace}.resource.${ci.rid}.unsubscribe`, { item: ci.item });
         return true;
     }
 
-    private _initItems(refs: Refs, type: ResType): void {
+    private async _initItems(refs: Refs, type: AnyResType): Promise<void> {
         if (!refs) {
             return;
         }
@@ -474,7 +498,7 @@ export default class ResClient {
         for (const rid of Object.keys(refs)) {
             const cacheItem = this.cache[rid];
             assert(cacheItem, `Missing CacheItem (rid: ${rid})`);
-            cacheItem.item.init(type.prepareData(refs[rid] as never) as never);
+            await cacheItem.item.init(type.prepareData(refs[rid] as never) as never);
         }
     }
 
@@ -566,11 +590,11 @@ export default class ResClient {
 
     private async _onError(e: unknown): Promise<void> {
         Debug("ws", "ResClient error", e);
-        this._connectReject({ code: SystemErrorCodes.CONNECTION_ERROR, message: "Connection error", data: e });
+        this._connectReject({ code: ErrorCodes.CONNECTION_ERROR, message: "Connection error", data: e });
     }
 
     private async _onMessage(e: MessageEvent): Promise<void> {
-        this._receive((e as { data: string; }).data);
+        await this._receive((e as { data: string; }).data);
     }
 
     private async _onOpen(e: unknown): Promise<void> {
@@ -583,7 +607,7 @@ export default class ResClient {
             .catch((err: ResError) => {
                 // Invalid error means the gateway doesn't support
                 // version requests. Default to legacy protocol.
-                if (err.code && err.code === SystemErrorCodes.INVALID_REQUEST) {
+                if (err.code && err.code === ErrorCodes.INVALID_REQUEST) {
                     this.protocol = LEGACY_PROTOCOL;
                     return;
                 }
@@ -623,7 +647,7 @@ export default class ResClient {
             });
     }
 
-    private _patchDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => void, onAdd: (item: T, aIndex: number, bIndex: number) => void, onRemove: (item: T, aIndex: number, idx: number) => void): void {
+    private _patchDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {
         return lcsDiff<T>(a, b, onKeep, onAdd, onRemove);
     }
 
@@ -657,7 +681,7 @@ export default class ResClient {
         return val;
     }
 
-    private _receive(json: string): void {
+    private async _receive(json: string): Promise<void> {
         const data = JSON.parse(json.trim()) as AnyObject;
         Debug("ws:receive", "<-", data);
 
@@ -673,12 +697,12 @@ export default class ResClient {
             delete this.requests[id];
 
             if (Object.hasOwn(data, "error")) {
-                this._handleErrorResponse(req, data);
+                await this._handleErrorResponse(req, data);
             } else {
-                this._handleSuccessResponse(req, data);
+                await this._handleSuccessResponse(req, data);
             }
         } else if (Object.hasOwn(data, "event")) {
-            this._handleEvent(data as never);
+            await this._handleEvent(data as never);
         } else {
             throw new Error("Invalid message from server: " + json);
         }
@@ -739,8 +763,8 @@ export default class ResClient {
         return this.connected
             ? this._sendNow<T>(m, params)
             : this.connect()
-                .catch(err => {
-                    throw new ResError(rid, m, params).init(err as Error);
+                .catch(async err => {
+                    throw (await (new ResError(this, rid, m, params)).init(err as Error));
                 })
                 .then(() => this._sendNow<T>(m, params));
     }
@@ -784,12 +808,12 @@ export default class ResClient {
         this._removeStale(rid);
         return this._send<Shared>("subscribe", rid)
             .then(response => this._cacheResources(response))
-            .catch(err => {
+            .catch(async err => {
                 if (throwError) {
                     this._handleFailedSubscribe(ci);
                     throw err;
                 } else {
-                    this._handleUnsubscribeEvent(ci);
+                    await this._handleUnsubscribeEvent(ci);
                 }
             });
     }
@@ -828,7 +852,7 @@ export default class ResClient {
         return this._subscribe(ci);
     }
 
-    private _syncCollection(cacheItem: CacheItem<ResCollection>, data: Array<RIDRef>): void {
+    private async _syncCollection(cacheItem: CacheItem<ResCollection>, data: Array<RIDRef>): Promise<void> {
         const collection = cacheItem.item;
         let i = collection.length;
         const a = Array.from({ length: i });
@@ -837,9 +861,9 @@ export default class ResClient {
         }
 
         const b = data.map(v => this._prepareValue(v as never));
-        this._patchDiff<unknown>(a, b,
+        await this._patchDiff<unknown>(a, b,
             () => {},
-            (id: unknown, n: number, idx: number): boolean => this._handleAddEvent(cacheItem, "add", {
+            (id: unknown, n: number, idx: number) => this._handleAddEvent(cacheItem, "add", {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 value: data[n]!,
                 idx
@@ -848,19 +872,19 @@ export default class ResClient {
         );
     }
 
-    private _syncItems(refs: AnyObject, type: ResType): void {
+    private async _syncItems(refs: AnyObject, type: AnyResType): Promise<void> {
         if (!refs) {
             return;
         }
 
         for (const rid of Object.keys((refs))) {
             const ci = this.cache[rid];
-            type.synchronize(ci as never, refs[rid] as never);
+            await type.synchronize(ci as never, refs[rid] as never);
         }
     }
 
-    private _syncModel(ci: CacheItem<ResModel>, data: ChangeEventData["values"]): void {
-        this._handleChangeEvent(ci, "change", { values: data }, true);
+    private async _syncModel(ci: CacheItem<ResModel>, data: ChangeEventData["values"]): Promise<void> {
+        await this._handleChangeEvent(ci, "change", { values: data }, true);
     }
 
     private _traverse(ci: CacheItem, cb: (ci: CacheItem, state: States) => States | boolean, state: States, skipFirst = false): void {
@@ -972,8 +996,8 @@ export default class ResClient {
 
     async create(rid: string, params: unknown): Promise<ResModel | ResError | ResCollection> {
         return this._send<Shared>("new", rid, undefined, params)
-            .then(result => {
-                this._cacheResources(result);
+            .then(async result => {
+                await this._cacheResources(result);
                 const _rid = (result as { rid: string; }).rid;
                 const ci = this.cache[rid];
                 assert(ci, `Missing CacheItem (rid: ${_rid})`);
@@ -987,7 +1011,7 @@ export default class ResClient {
 
         if (this.ws) {
             const ws = this.ws;
-            const err = { code: SystemErrorCodes.DISCONNECT, message: "Disconnect called" };
+            const err = { code: ErrorCodes.DISCONNECT, message: "Disconnect called" };
             ws.removeEventListener("close", this.onClose);
             await this.onClose(err);
             ws.close();

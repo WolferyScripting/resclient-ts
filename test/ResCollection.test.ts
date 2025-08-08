@@ -7,9 +7,9 @@ describe("ResCollection", () => {
     let primitives: ResCollection;
     let models: ResCollection;
 
-    beforeEach(() => {
+    beforeEach(async() => {
         primitives = new ResCollection(api, "service.primitives");
-        primitives.init([
+        await primitives.init([
             "Ten",
             "Twenty",
             false,
@@ -19,7 +19,7 @@ describe("ResCollection", () => {
         models = new ResCollection(api, "services.models", {
             idCallback: (m: unknown): string => (m as { id: string; }).id
         });
-        models.init([
+        await models.init([
             { id: 10, name: "Ten" },
             { id: 20, name: "Twenty" },
             { id: 30, name: "Thirty" }

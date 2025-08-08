@@ -16,7 +16,7 @@ export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionMode
     return { added: added.map(key => model.props[key] as T), removed };
 }
 
-export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => void, onAdd: (item: T, aIndex: number, bIndex: number) => void, onRemove: (item: T, aIndex: number, idx: number) => void): void {
+export async function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {
     // Do a LCS matric calculation
     // https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
     let start = 0;
@@ -55,7 +55,7 @@ export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: n
 
     // Handle unchanged tail elements
     for (let i = a.length - 1; i >= endA; i--) {
-        onKeep(a[i]!, i, i - m + n, i);
+        await onKeep(a[i]!, i, i - m + n, i);
     }
 
     // Walk back through LCS matrix
@@ -68,14 +68,14 @@ export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: n
         const bIdx = j - 1;
 
         if (i > 0 && j > 0 && equal(sliceA[aIdx], sliceB[bIdx])) {
-            onKeep(sliceA[aIdx]!, start + aIdx, start + bIdx, --idx);
+            await onKeep(sliceA[aIdx]!, start + aIdx, start + bIdx, --idx);
             i--;
             j--;
         } else if (j > 0 && (i === 0 || lcs[i]![bIdx]! >= lcs[aIdx]![j]!)) {
             additions.push([bIdx, idx, removeCount]);
             j--;
         } else if (i > 0 && (j === 0 || lcs[i]![bIdx]! < lcs[aIdx]![j]!)) {
-            onRemove(sliceA[aIdx]!, start + aIdx, --idx);
+            await onRemove(sliceA[aIdx]!, start + aIdx, --idx);
             removeCount++;
             i--;
         } else {
@@ -85,7 +85,7 @@ export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: n
 
     // Handle unchanged head elements
     for (let ii = start - 1; ii >= 0; ii--) {
-        onKeep(a[i]!, ii, ii, ii);
+        await onKeep(a[i]!, ii, ii, ii);
     }
 
     // Handle additions
@@ -93,6 +93,6 @@ export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: n
     for (let k = totalAdds - 1; k >= 0; k--) {
         const [bIdx, idx2, remOffset] = additions[k]!;
         const adjustedIdx = idx2 - removeCount + remOffset + totalAdds - k - 1;
-        onAdd(sliceB[bIdx]!, start + bIdx, adjustedIdx);
+        await onAdd(sliceB[bIdx]!, start + bIdx, adjustedIdx);
     }
 }

@@ -80,7 +80,7 @@ export default class ResCollection<V = unknown> {
     }
 
     /** Called when the collection is deleted. */
-    dispose(): void {
+    async dispose(): Promise<void> {
         // noop
     }
 
@@ -154,7 +154,7 @@ export default class ResCollection<V = unknown> {
         return this._list.indexOf(item);
     }
 
-    init(data: Array<V> = []): this {
+    async init(data: Array<V> = []): Promise<this> {
         this._list = data;
 
         if (this._idCallback) {

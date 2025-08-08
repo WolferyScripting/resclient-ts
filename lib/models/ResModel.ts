@@ -49,7 +49,7 @@ export default class ResModel {
     }
 
     /** Called when the model is deleted. */
-    dispose(): void {
+    async dispose(): Promise<void> {
         // noop
     }
 
@@ -57,7 +57,7 @@ export default class ResModel {
         return this.api;
     }
 
-    init(data?: AnyObject): this {
+    async init(data?: AnyObject): Promise<this> {
         if (data) {
             this.update(data);
         }

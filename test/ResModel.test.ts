@@ -18,23 +18,23 @@ describe("ResModel", () => {
             expect(model.int).to.equal(42);
         });
 
-        it("does not overwrite existing ResModel properties", () => {
+        it("does not overwrite existing ResModel properties", async() => {
             const model = new ResModel(api, "service.model");
             const o: Record<string, unknown> = {};
             for (const k of Object.keys(model)) {
                 o[k] = k;
             }
-            model.init(o);
+            await model.init(o);
             for (const k of Object.keys(o)) {
             // @ts-expect-error property is not typed
                 expect(model[k]).to.not.equal(k);
             }
         });
 
-        it("initializes the model with linked resources", () => {
+        it("initializes the model with linked resources", async () => {
             const model = new ResModel(api, "service.model");
             const childModel = new ResModel(api, "service.model.child");
-            model.init({ child: childModel });
+            await model.init({ child: childModel });
             // @ts-expect-error property is not typed
             expect(model.child).to.equal(childModel);
         });
@@ -42,60 +42,60 @@ describe("ResModel", () => {
     });
 
     describe("props", () => {
-        it("returns the properties", () => {
+        it("returns the properties", async () => {
             const model = new ResModel(api, "service.model");
-            model.init({
+            await model.init({
                 foo: "bar",
                 int: 42
             });
             expect(model["_props"]).to.deep.equal({ foo: "bar", int: 42 });
         });
 
-        it("returns hidden properties", () => {
+        it("returns hidden properties", async () => {
             const model = new ResModel(api, "service.model");
             const o: Record<string, unknown> = {};
             for (const k of Object.keys(model)) {
                 o[k] = k;
             }
-            model.init(o);
+            await model.init(o);
             expect(model["_props"]).to.deep.equal(o);
         });
     });
 
     describe("toJSON", () => {
-        it("returns the properties", () => {
+        it("returns the properties", async () => {
             const model = new ResModel(api, "service.model");
-            model.init({
+            await model.init({
                 foo: "bar",
                 int: 42
             });
             expect(model.toJSON()).to.deep.equal({ foo: "bar", int: 42 });
         });
 
-        it("returns hidden properties", () => {
+        it("returns hidden properties", async () => {
             const model = new ResModel(api, "service.model");
             const o: Record<string, unknown> = {};
             for (const k of Object.keys(model)) {
                 o[k] = k;
             }
-            model.init(o);
+            await model.init(o);
             expect(model.toJSON()).to.deep.equal(o);
         });
 
-        it("returns linked resources", () => {
+        it("returns linked resources", async () => {
             const model = new ResModel(api, "service.model");
             const childModel = new ResModel(api, "service.model.child");
-            childModel.init({ zoo: "baz" });
-            model.init({ foo: "bar", child: childModel });
+            await childModel.init({ zoo: "baz" });
+            await model.init({ foo: "bar", child: childModel });
             expect(model.toJSON()).to.deep.equal({ foo: "bar", child: { zoo: "baz" } });
         });
 
     });
 
     describe("update", () => {
-        it("updates properties with new value", () => {
+        it("updates properties with new value", async () => {
             const model = new ResModel(api, "service.model");
-            model.init({
+            await model.init({
                 foo: "bar",
                 int: 42
             });
@@ -106,9 +106,9 @@ describe("ResModel", () => {
             expect(model["_props"].foo).to.equal("baz");
         });
 
-        it("updates hidden properties with new value", () => {
+        it("updates hidden properties with new value", async () => {
             const model = new ResModel(api, "service.model");
-            model.init({
+            await model.init({
                 foo: "bar",
                 int: 42,
                 on:  "on",
@@ -123,12 +123,11 @@ describe("ResModel", () => {
             expect(model["_props"].api).to.equal(false);
         });
 
-        it("returns null on empty props", () => {
+        it("returns null on empty props", async () => {
             const model = new ResModel(api, "service.model");
-            model.init({ foo: "bar", int: 42 });
+            await model.init({ foo: "bar", int: 42 });
             const changed = model.update(null as never);
             expect(changed).to.eq(null);
         });
     });
-
 });
