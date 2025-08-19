@@ -1085,7 +1085,7 @@ export default class ResClient {
     }
 
     resourceOff(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
-        Debug("client:resourceOff", rid);
+        Debug("client:resourceOff", `${rid} ${events === null ? "all" : (Array.isArray(events) ? events.join(", ") : events)}`);
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
@@ -1096,7 +1096,7 @@ export default class ResClient {
     }
 
     resourceOn(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
-        Debug("client:resourceOn", rid);
+        Debug("client:resourceOn", `${rid} ${events === null ? "all" : (Array.isArray(events) ? events.join(", ") : events)}`);
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {
             throw new Error(`Resource ${rid} not found in cache`);
