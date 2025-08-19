@@ -3,7 +3,7 @@ import ResModel, { type ResModelOptions } from "./ResModel.js";
 import type ResRef from "./ResRef.js";
 import { changeDiff } from "../util/util.js";
 import Properties from "../util/Properties.js";
-import type { AnyClass, AnyObject } from "../util/types.js";
+import type { AnyClass } from "../util/types.js";
 
 export type ModelTypeUnion<T> = T extends ResModel | ResRef ? AnyClass<T> : never;
 export default class ResCollectionModel<T extends ResModel | ResRef = ResModel | ResRef> extends ResModel {
@@ -36,18 +36,12 @@ export default class ResCollectionModel<T extends ResModel | ResRef = ResModel |
         return !this._modelTypes.some(type => value instanceof type) && super._shouldPromoteKey(key, value);
     }
 
+    protected override async listen(on: boolean): Promise<void> {
+        const m = on ? "resourceOn" : "resourceOff";
+        this[m]("change", this.onChange);
+    }
+
     get list(): Array<T> {
         return Object.values(this.props as Record<string, T>);
-    }
-
-    override async dispose(): Promise<void> {
-        await super.dispose();
-        this.resourceOff("change", this.onChange);
-    }
-
-    override async init(data?: AnyObject | undefined): Promise<this> {
-        await super.init(data);
-        this.resourceOn("change", this.onChange);
-        return this;
     }
 }

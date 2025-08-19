@@ -26,6 +26,11 @@ export default class ResCollection<V = unknown> {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    protected async listen(on: boolean): Promise<void> {
+        // empty
+    }
+
     protected get p(): Properties {
         return Properties.of(this);
     }
@@ -79,9 +84,9 @@ export default class ResCollection<V = unknown> {
         return this.api.call<T>(this.rid, method, params);
     }
 
-    /** Called when the collection is deleted. */
+    /** Called when the collection is unsubscribed. */
     async dispose(): Promise<void> {
-        // noop
+        await this.listen(false);
     }
 
     /** See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every | Array#every } */
@@ -170,6 +175,7 @@ export default class ResCollection<V = unknown> {
                 this._map[id] = v;
             }
         }
+        await this.listen(true);
 
         return this;
     }

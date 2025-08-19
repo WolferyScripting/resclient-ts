@@ -28,6 +28,11 @@ export default class ResModel {
         return true;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    protected async listen(on: boolean): Promise<void> {
+        // empty
+    }
+
     protected get cacheItem(): CacheItem<ResModel> {
         return this.getClient().cache[this.rid] as CacheItem<ResModel>;
     }
@@ -48,9 +53,9 @@ export default class ResModel {
         return this.api.call<T>(this.rid, method, params);
     }
 
-    /** Called when the model is deleted. */
+    /** Called when the model is unsubscribed. */
     async dispose(): Promise<void> {
-        // noop
+        await this.listen(false);
     }
 
     getClient(): ResClient {
@@ -62,6 +67,7 @@ export default class ResModel {
             this.update(data);
         }
 
+        await this.listen(true);
         return this;
     }
 
