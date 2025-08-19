@@ -20,14 +20,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DonovanDMC/resclient.git"
+    "url": "git+https://github.com/WolferyScripting/resclient-ts.git"
   },
   "author": "Donovan_DMC <hewwo@yiff.rocks>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/DonovanDMC/resclient/issues"
+    "url": "https://github.com/WolferyScripting/resclient-ts/issues"
   },
-  "homepage": "https://github.com/DonovanDMC/resclient#readme",
+  "homepage": "https://github.com/WolferyScripting/resclient-ts#readme",
   "devDependencies": {
     "@swc/core": "^1.3.69",
     "@swc/helpers": "^0.5.1",

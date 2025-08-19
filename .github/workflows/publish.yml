@@ -22,9 +22,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.13.0
+          node-version-file: .node-version
           cache: pnpm
           registry-url: https://registry.npmjs.org
+
+      - name: Update NPM # Needed for provenance
+        run: npm i -g npm@">=9.5 <10"
 
       - name: Install dependencies
         run: pnpm i --frozen-lockfile --ignore-scripts

@@ -16,3 +16,4 @@ export { default as ModelToCollection } from "./includes/resource/ModelToCollect
 export * from "./includes/utils/obj.js";
 export * from "./includes/utils/array.js";
 export * from "./util/util.js";
+export { setDebugDepth } from "./util/Debug.js";
