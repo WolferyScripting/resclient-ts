@@ -156,7 +156,7 @@ export default class ResModel {
                 v = props[key];
                 promote = (Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false && this._shouldPromoteKey(key, v);
                 if (!equal(p[key], v)) {
-                    changed = changed || {};
+                    changed ||= {};
                     changed[key] = p[key];
                     if (v === undefined) {
                         delete p[key];

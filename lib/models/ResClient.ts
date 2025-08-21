@@ -44,6 +44,9 @@ import assert from "node:assert";
 export type OnConnectFunction = (api: ResClient) => unknown;
 export type OnConnectErrorFunction = (api: ResClient, err: unknown) => unknown;
 export interface ClientOptions {
+    defaultCollectionFactory?: ItemFactory<ResCollection>;
+    defaultErrorFactory?: ItemFactory<ResError>;
+    defaultModelFactory?: ItemFactory<ResModel>;
     eventBus?: EventBus;
     namespace?: string;
     onConnect?: OnConnectFunction;
@@ -89,6 +92,9 @@ export default class ResClient {
     connectCallback: { reject(err: ErrorData): void; resolve(): void; } | null = null;
     connectPromise: Promise<void> | null = null;
     connected = false;
+    defaultCollectionFactory: ItemFactory<ResCollection>;
+    defaultErrorFactory: ItemFactory<ResError>;
+    defaultModelFactory: ItemFactory<ResModel>;
     eventBus = eventBus;
     namespace = "resclient";
     onConnect: OnConnectFunction | null = null;
@@ -102,7 +108,7 @@ export default class ResClient {
     types = {
         collection: {
             id:          COLLECTION_TYPE,
-            list:        new TypeList((api, rid) => new ResCollection(api, rid)),
+            list:        new TypeList((api, rid) => this.defaultCollectionFactory(api, rid)),
             prepareData: (data: Array<unknown>): Array<unknown> => data.map(item => this._prepareValue(item as never, true)),
             getFactory(rid: string): ItemFactory<ResCollection> {
                 return this.list.getFactory(rid);
@@ -111,7 +117,7 @@ export default class ResClient {
         } satisfies ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>> as ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>>,
         error: {
             id:          ERROR_TYPE,
-            list:        new TypeList((api, rid) => new ResError(api, rid)),
+            list:        new TypeList((api, rid) => this.defaultErrorFactory(api, rid)),
             prepareData: (data: unknown): unknown => data,
             getFactory(rid: string): ItemFactory<ResError> {
                 return this.list.getFactory(rid);
@@ -121,7 +127,7 @@ export default class ResClient {
         } satisfies ResType<typeof ERROR_TYPE, ResError, unknown> as ResType<typeof ERROR_TYPE, ResError, unknown>,
         model: {
             id:          MODEL_TYPE,
-            list:        new TypeList((api, rid) => new ResModel(api, rid)),
+            list:        new TypeList((api, rid) => this.defaultModelFactory(api, rid)),
             prepareData: (data: AnyObject): AnyObject => {
                 const obj = {} as AnyObject;
                 // eslint-disable-next-line guard-for-in
@@ -160,6 +166,9 @@ export default class ResClient {
             this.retryOnTooActive = options.retryOnTooActive;
         }
 
+        this.defaultCollectionFactory = options.defaultCollectionFactory ?? ((api: ResClient, rid: string): ResCollection => new ResCollection(api, rid));
+        this.defaultErrorFactory = options.defaultErrorFactory ?? ((api: ResClient, rid: string): ResError => new ResError(api, rid));
+        this.defaultModelFactory = options.defaultModelFactory ?? ((api: ResClient, rid: string): ResModel => new ResModel(api, rid));
         this.wsFactory = typeof hostUrlOrFactory === "string" ? (): WebSocket => new WebSocket(hostUrlOrFactory) : hostUrlOrFactory;
 
         Properties.of(this)
