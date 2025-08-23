@@ -32,13 +32,13 @@ export default class ResCollectionModel<T extends ResModel | ResRef = ResModel |
         }
     }
 
-    protected override _shouldPromoteKey(key: string, value: unknown): boolean {
-        return !this._modelTypes.some(type => value instanceof type) && super._shouldPromoteKey(key, value);
-    }
-
-    protected override async listen(on: boolean): Promise<void> {
+    protected override async _listen(on: boolean): Promise<void> {
         const m = on ? "resourceOn" : "resourceOff";
         this[m]("change", this.onChange);
+    }
+
+    protected override _shouldPromoteKey(key: string, value: unknown): boolean {
+        return !this._modelTypes.some(type => value instanceof type) && super._shouldPromoteKey(key, value);
     }
 
     get list(): Array<T> {

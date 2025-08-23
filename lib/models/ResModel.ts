@@ -24,13 +24,13 @@ export default class ResModel {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected _shouldPromoteKey(key: string, value: unknown): boolean {
-        return true;
+    protected async _listen(on: boolean): Promise<void> {
+        // empty
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected async listen(on: boolean): Promise<void> {
-        // empty
+    protected _shouldPromoteKey(key: string, value: unknown): boolean {
+        return true;
     }
 
     protected get cacheItem(): CacheItem<ResModel> {
@@ -55,7 +55,7 @@ export default class ResModel {
 
     /** Called when the model is unsubscribed. */
     async dispose(): Promise<void> {
-        await this.listen(false);
+        await this._listen(false);
     }
 
     getClient(): ResClient {
@@ -67,7 +67,7 @@ export default class ResModel {
             this.update(data);
         }
 
-        await this.listen(true);
+        await this._listen(true);
         return this;
     }
 
