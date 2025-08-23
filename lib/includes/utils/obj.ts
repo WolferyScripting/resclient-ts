@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function */
 
-import type { AnyObject } from "../../util/types.js";
+import type ResModel from "../../models/ResModel.js";
+import type { AnyClass, AnyObject } from "../../util/types.js";
+import type ResCollection from "../../models/ResCollection.js";
+import { format } from "node:util";
+import assert from "node:assert";
 
 export function equal(a: unknown, b: unknown): boolean {
     // Check if a is a non-object
@@ -440,4 +444,25 @@ export function copy<T extends AnyObject>(source: T, def: Record<string, Propert
     const obj = {} as T;
     update(obj, source, def, strict);
     return obj;
+}
+
+export function modelProperty(property: string, model: AnyClass<ResModel>, optional: boolean): PropertyDefinition {
+    return {
+        property,
+        type: optional ? "?object" : "object",
+        assert(value: unknown): void {
+            if (optional && value === null) return;
+            assert(value instanceof model, `Expected instance of ${model.name} for ${property}, got ${format(value)}`);
+        }
+    };
+}
+
+export function collectionProperty(property: string, model: AnyClass<ResCollection>, optional: boolean): PropertyDefinition {
+    return {
+        type: optional ? "?object" : "object",
+        assert(value: unknown): void {
+            if (optional && value === null) return;
+            assert(value instanceof model, `Expected instance of ${model.name} for ${property}, got ${format(value)}`);
+        }
+    };
 }
