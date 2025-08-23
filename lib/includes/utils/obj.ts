@@ -318,6 +318,29 @@ export interface PropertyDefinition {
     assert?(val: unknown): void;
     filter?(val: unknown): PropertyDefinition;
 }
+
+/* eslint-disable @typescript-eslint/ban-types */
+export interface DefinitionTypeMap {
+    "?array": Array<unknown> | null;
+    "?array[number]": Array<number> | null;
+    "?array[string]": Array<string> | null;
+    "?boolean": boolean | null;
+    "?function": Function | null;
+    "?number": number | null;
+    "?object": object | null;
+    "?string": string | null;
+    "any": unknown;
+    "array": Array<unknown>;
+    "array[number]": Array<number>;
+    "array[string]": Array<string>;
+    "boolean": boolean;
+    "function": Function;
+    "number": number;
+    "object": object;
+    "string": string;
+}
+/* eslint-enable @typescript-eslint/ban-types */
+
 /**
  * Updates an target object from a source object based upon a definition
  * @param target Target object
