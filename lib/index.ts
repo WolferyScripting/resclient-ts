@@ -1,5 +1,5 @@
 export { default as CacheItem } from "./models/CacheItem.js";
-export { default as ResClient } from "./models/ResClient.js";
+export { default, default as ResClient } from "./models/ResClient.js";
 export type * from "./models/ResClient.js";
 export { default as ResCollection } from "./models/ResCollection.js";
 export { default as ResCollectionModel, type ModelTypeUnion } from "./models/ResCollectionModel.js";

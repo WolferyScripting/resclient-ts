@@ -1,21 +1,46 @@
+import type { Debug as DebugType } from "debug";
 import { formatWithOptions } from "node:util";
 
-
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let debug: import("debug").Debug | undefined;
-try {
-    debug = (await import("debug")).default;
-} catch {}
+// the things I do for esm first with cjs support
+let debug: DebugType | undefined | null;
+function getDebug(): Promise<DebugType | null> | DebugType | null {
+    if (debug !== undefined) return debug;
+    try {
+        // eslint-disable-next-line unicorn/prefer-module
+        if (typeof require === "undefined") {
+            return import("debug").then(mod => (debug = mod.default)).catch(() => (debug = null));
+        } else {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires, unicorn/prefer-module
+            debug = (require("debug") as { default: DebugType; }).default;
+        }
+    } catch {
+        debug = null;
+    }
+    return debug;
+}
 
 let depth = 2;
 export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>): void {
-    if (typeof arg0 === "object" && arg0 !== null) {
-        arg0 = Object.create(arg0);
-        for (const s of Object.getOwnPropertySymbols(arg0)) {
-            Object.defineProperty(arg0, s, { enumerable: false });
-        }
+    const log = (dt: DebugType): void => dt(`wolferyjs:${namspace}`)(formatWithOptions({ colors: true, showHidden: false, depth }, arg0, ...args));
+    const d = getDebug();
+    if (d instanceof Promise) {
+        void d.then(dt => {
+            if (dt) {
+                log(dt);
+            }
+        });
+    } else if (d) {
+        log(d);
     }
-    return debug ? debug(`resclient:${namspace}`)(formatWithOptions({ colors: true, showHidden: false, depth }, arg0, ...args)) : undefined;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createDebug(namespace: string): (formatter: any, ...args: Array<any>) => void {
+    const d = getDebug();
+    if (!d || d instanceof Promise) {
+        return () => {}; // noop
+    }
+    return d(`resclient:${namespace}`);
 }
 
 /**

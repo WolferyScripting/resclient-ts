@@ -3,17 +3,21 @@
   "version": "1.0.7",
   "description": "A RES client written in typescript.",
   "packageManager": "pnpm@9.6.0",
-  "types": "./dist/index.d.ts",
-  "module": "./dist/index.js",
+  "types": "./dist/esm/index.d.mts",
+  "module": "./dist/esm/index.mjs",
+  "main": "./dist/cjs/index.cjs",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/esm/index.d.mts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs"
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && cp lib/util/types.d.ts dist/util/",
+    "build": "sh build.sh",
+    "prepack": "npm run build",
     "lint": "eslint lib",
+    "lint:fix": "eslint lib --fix",
     "test": "c8 mocha",
     "coverage": "c8 report --reporter=text-lcov | coveralls",
     "prepublishOnly": "npm run build && npm test"
@@ -41,6 +45,7 @@
     "@typescript-eslint/parser": "^7.18.0",
     "c8": "^10.1.3",
     "chai": "^5.2.1",
+    "copyfiles": "^2.4.1",
     "coveralls": "^3.1.1",
     "debug": "^4.3.4",
     "eslint": "^8.57.1",
@@ -59,6 +64,7 @@
     "typescript": "~5.4.5"
   },
   "dependencies": {
+    "tslib": "^2.8.1",
     "ws": "^8.13.0"
   },
   "engines": {

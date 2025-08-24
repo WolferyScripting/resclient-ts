@@ -23,6 +23,8 @@ Visit [Resgate.io](https://resgate.io) for more information.
 npm install resclient-ts
 ```
 
+This module supports both ESModules and CommonJS. The primary code is ESModules.
+
 
 ## Basic Usage
 
@@ -33,8 +35,6 @@ const wsFactory = () => new WebSocket("ws://localhost:8080");
 // Create instance with a WebSocket factory function
 const client = new ResClient(wsFactory);
 ```
-
-This module is built for first party ESModules.
 
 ## Example usage
 
