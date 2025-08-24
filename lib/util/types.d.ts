@@ -1,9 +1,8 @@
-// copy to dist
 import type { States, ACTION_DELETE } from "../Constants.js";
-import type CacheItem from "../models/CacheItem.ts";
-import type ResCollection from "../models/ResCollection.ts";
-import type ResError from "../models/ResError.ts";
-import type ResModel from "../models/ResModel.ts";
+import type CacheItem from "../models/CacheItem.js";
+import type ResCollection from "../models/ResCollection.js";
+import type ResError from "../models/ResError.js";
+import type ResModel from "../models/ResModel.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyFunction = (...args: Array<any>) => any;
