@@ -8,9 +8,9 @@ import { UpdateError } from "../util/errors.js";
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
 }
-export default class ResModel {
+export default class ResModel<P extends AnyObject = AnyObject> {
     protected _definition?: Record<string, PropertyDefinition>;
-    protected _props!: AnyObject;
+    protected _props!: P;
     protected api!: ResClient;
     rid!: string;
     constructor(api: ResClient, rid: string, options?: ResModelOptions) {
@@ -42,7 +42,7 @@ export default class ResModel {
         return Properties.of(this);
     }
 
-    get props(): AnyObject {
+    get props(): P {
         return this._props;
     }
 
@@ -110,7 +110,7 @@ export default class ResModel {
         for (const k in o) {
             const v = o[k];
             if (typeof v === "object" && v !== null && "toJSON" in v) {
-                o[k] = (v as { toJSON(): object; }).toJSON();
+                o[k] = (v as { toJSON(): object; }).toJSON() as never;
             }
         }
         return o;
@@ -129,7 +129,7 @@ export default class ResModel {
         let changed: AnyObject | null = null, v: unknown, promote: boolean;
 
         try {
-            const p = this._props;
+            const p = this._props as AnyObject;
 
             if (reset) {
                 props = { ...props };

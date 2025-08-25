@@ -6,11 +6,11 @@ import Properties from "../util/Properties.js";
 import type { AnyClass } from "../util/types.js";
 
 export type ModelTypeUnion<T> = T extends ResModel | ResRef ? AnyClass<T> : never;
-export default class ResCollectionModel<T extends ResModel | ResRef = ResModel | ResRef> extends ResModel {
+export default class ResCollectionModel<T extends ResModel | ResRef = ResModel | ResRef> extends ResModel<Record<string, T>> {
     private onChange = this._onChange.bind(this);
     protected _list!: Array<T>;
     protected _modelTypes!: Array<ModelTypeUnion<T>>;
-    constructor(api: ResClient, rid: string, modelTypes: ModelTypeUnion<T> | Array<ModelTypeUnion<T>>, options?: ResModelOptions) {
+    constructor(api: ResClient, rid: string, modelTypes: ModelTypeUnion<T> | Array<ModelTypeUnion<T>>, options?: Omit<ResModelOptions, "definition">) {
         super(api, rid, options);
         Properties.of(this)
             .writable("_list", [])
@@ -42,6 +42,10 @@ export default class ResCollectionModel<T extends ResModel | ResRef = ResModel |
     }
 
     get list(): Array<T> {
-        return Object.values(this.props as Record<string, T>);
+        return Object.values(this.props);
+    }
+
+    get(key: string): T | undefined {
+        return this.props[key];
     }
 }
