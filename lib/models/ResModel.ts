@@ -3,7 +3,7 @@ import type CacheItem from "./CacheItem.js";
 import { copy, equal, update, type PropertyDefinition } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
 import type { AnyFunction, AnyObject } from "../util/types.js";
-import UpdateError from "../util/UpdateError.js";
+import { UpdateError } from "../util/errors.js";
 
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;

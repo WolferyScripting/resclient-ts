@@ -3,8 +3,8 @@
 import type ResModel from "../../models/ResModel.js";
 import type { AnyClass, AnyObject } from "../../util/types.js";
 import type ResCollection from "../../models/ResCollection.js";
-import { format } from "node:util";
-import assert from "node:assert";
+import ResError from "../../models/ResError.js";
+import { DefinitionAssertionError, InvalidPropertyValueError } from "../../util/errors.js";
 
 export function equal(a: unknown, b: unknown): boolean {
     // Check if a is a non-object
@@ -51,7 +51,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "string") {
-                throw new TypeError("Not a string");
+                throw new DefinitionAssertionError("string", v);
             }
         },
         fromString: String
@@ -62,10 +62,10 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "string" && v !== null) {
-                throw new Error("Not a string or null");
+                throw new DefinitionAssertionError("string or null", v);
             }
         },
-        fromString: String // Not possible to set null
+        fromString: (v: string | null): string | null => v
     },
     "number": {
         default(): number {
@@ -73,13 +73,13 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "number") {
-                throw new TypeError("Not a number");
+                throw new DefinitionAssertionError("number", v);
             }
         },
         fromString(v: string | number): number {
             v = Number(v);
             if (isNaN(v)) {
-                throw new TypeError("Not a number format");
+                throw new DefinitionAssertionError("number", v);
             }
             return v;
         }
@@ -90,13 +90,13 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "number" && v !== null) {
-                throw new Error("Not a number or null");
+                throw new DefinitionAssertionError("number or null", v);
             }
         },
         fromString(v: string | number | null): number | null {
             v = !v || String(v).toLowerCase() === "null" ? null : Number(v);
             if (v !== null && isNaN(v)) {
-                throw new TypeError("Not a number format");
+                throw new DefinitionAssertionError("number or null", v);
             }
             return v;
         }
@@ -107,7 +107,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "boolean") {
-                throw new TypeError("Not a boolean");
+                throw new DefinitionAssertionError("boolean", v);
             }
         },
         fromString(v: string | boolean): boolean {
@@ -117,7 +117,7 @@ export const TYPES = {
             } else if (v === "false" || v === "0" || v === "no") {
                 v = false;
             } else {
-                throw new Error("Not a boolean format");
+                throw new DefinitionAssertionError("boolean", v);
             }
             return v;
         }
@@ -128,7 +128,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "boolean" && v !== null) {
-                throw new Error("Not a boolean or null");
+                throw new DefinitionAssertionError("boolean or null", v);
             }
         },
         fromString(v: string | boolean | null): boolean | null {
@@ -150,7 +150,7 @@ export const TYPES = {
                     return null;
                 }
                 default: {
-                    throw new Error("Not a nullable boolean format");
+                    throw new DefinitionAssertionError("boolean or null", v);
                 }
             }
         }
@@ -161,7 +161,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "object" || v === null) {
-                throw new Error("Not an object");
+                throw new DefinitionAssertionError("object", v);
             }
         },
         fromString(v: string): AnyObject {
@@ -174,7 +174,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "object") {
-                throw new TypeError("Not an object or null");
+                throw new DefinitionAssertionError("object or null", v);
             }
         },
         fromString(v: string): AnyObject | null {
@@ -190,7 +190,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v)) {
-                throw new TypeError("Not an array");
+                throw new DefinitionAssertionError("array", v);
             }
         },
         fromString(v: string): Array<unknown> {
@@ -203,7 +203,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v) && v !== null) {
-                throw new TypeError("Not an array or null");
+                throw new DefinitionAssertionError("array or null", v);
             }
         },
         fromString(v: string): Array<unknown> | null {
@@ -219,10 +219,10 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v)) {
-                throw new TypeError("Not an array");
+                throw new DefinitionAssertionError("array of strings", v);
             }
             if (!v.every(e => typeof e === "string")) {
-                throw new TypeError("Not all array elements are strings");
+                throw new DefinitionAssertionError("array of only strings", v);
             }
         },
         fromString(v: string): Array<string> {
@@ -235,10 +235,10 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v) && v !== null) {
-                throw new TypeError("Not an array or null");
+                throw new DefinitionAssertionError("array of strings or null", v);
             }
             if (v && !v.every(e => typeof e === "string")) {
-                throw new TypeError("Not all array elements are strings");
+                throw new DefinitionAssertionError("array of only strings", v);
             }
         },
         fromString(v: string): Array<string> | null {
@@ -254,10 +254,10 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v)) {
-                throw new TypeError("Not an array");
+                throw new DefinitionAssertionError("array of numbers", v);
             }
             if (!v.every(e => typeof e === "number")) {
-                throw new TypeError("Not all array elements are numbers");
+                throw new DefinitionAssertionError("array of only numbers", v);
             }
         },
         fromString(v: string): Array<number> {
@@ -270,10 +270,10 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (!Array.isArray(v) && v !== null) {
-                throw new TypeError("Not an array or null");
+                throw new DefinitionAssertionError("array of numbers or null", v);
             }
             if (v && !v.every(e => typeof e === "number")) {
-                throw new TypeError("Not all array elements are numbers");
+                throw new DefinitionAssertionError("array of only numbers", v);
             }
         },
         fromString(v: string): Array<number> | null {
@@ -290,7 +290,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "function") {
-                throw new TypeError("Not a function");
+                throw new DefinitionAssertionError("function", v);
             }
         },
         fromString(_v: unknown): void {} // Evaluating functions from strings is not allowed
@@ -302,7 +302,7 @@ export const TYPES = {
         },
         assert(v: unknown): void {
             if (typeof v !== "function" && v !== null) {
-                throw new Error("Not a function or null");
+                throw new DefinitionAssertionError("function or null", v);
             }
         },
         fromString(_v: unknown): void {} // Evaluating functions from strings is not allowed
@@ -446,23 +446,27 @@ export function copy<T extends AnyObject>(source: T, def: Record<string, Propert
     return obj;
 }
 
-export function modelProperty(property: string, model: AnyClass<ResModel>, optional: boolean): PropertyDefinition {
+export function modelProperty(property: string, model: AnyClass<ResModel>, optional = false, error = false): PropertyDefinition {
     return {
         property,
         type: optional ? "?object" : "object",
         assert(value: unknown): void {
             if (optional && value === null) return;
-            assert(value instanceof model, `Expected instance of ${model.name} for ${property}, got ${format(value)}`);
+            if (error && value instanceof ResError) return;
+            if (value instanceof model) return;
+            throw new InvalidPropertyValueError(property, `instance of ${model.name}`, value);
         }
     };
 }
 
-export function collectionProperty(property: string, model: AnyClass<ResCollection>, optional: boolean): PropertyDefinition {
+export function collectionProperty(property: string, model: AnyClass<ResCollection>, optional = false, error = false): PropertyDefinition {
     return {
         type: optional ? "?object" : "object",
         assert(value: unknown): void {
             if (optional && value === null) return;
-            assert(value instanceof model, `Expected instance of ${model.name} for ${property}, got ${format(value)}`);
+            if (error && value instanceof ResError) return;
+            if (value instanceof model) return;
+            throw new InvalidPropertyValueError(property, `instance of ${model.name}`, value);
         }
     };
 }

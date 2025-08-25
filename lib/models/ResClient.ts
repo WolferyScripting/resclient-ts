@@ -37,7 +37,7 @@ import type {
 import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
-import { lcsDiff } from "../util/util.js";
+import { lcsDiffAsync } from "../util/util.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
 
@@ -661,8 +661,8 @@ export default class ResClient {
             });
     }
 
-    private _patchDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {
-        return lcsDiff<T>(a, b, onKeep, onAdd, onRemove);
+    private async _patchDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => Promise<unknown>, onAdd: (item: T, aIndex: number, bIndex: number) => Promise<unknown>, onRemove: (item: T, aIndex: number, idx: number) => Promise<unknown>): Promise<void> {
+        return lcsDiffAsync<T>(a, b, onKeep, onAdd, onRemove);
     }
 
     private _prepareValue(v: { action?: string; data?: unknown; rid?: string; soft?: boolean; } | string, addIndirect = false): unknown {
@@ -876,13 +876,9 @@ export default class ResClient {
 
         const b = data.map(v => this._prepareValue(v as never));
         await this._patchDiff<unknown>(a, b,
-            () => {},
-            (id: unknown, n: number, idx: number) => this._handleAddEvent(cacheItem, "add", {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                value: data[n]!,
-                idx
-            }),
-            (id: unknown, m: number, idx: number) => this._handleRemoveEvent(cacheItem, "remove", { idx })
+            async () => {},
+            async (id: unknown, n: number, idx: number) => this._handleAddEvent(cacheItem, "add", { value: data[n]!, idx }),
+            async (id: unknown, m: number, idx: number) => this._handleRemoveEvent(cacheItem, "remove", { idx })
         );
     }
 

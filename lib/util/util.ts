@@ -16,7 +16,7 @@ export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionMode
     return { added: added.map(key => model.props[key] as T), removed };
 }
 
-export async function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {
+async function lcsDiffInternal<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {
     // Do a LCS matric calculation
     // https://en.wikipedia.org/wiki/Longest_common_subsequence_problem
     let start = 0;
@@ -95,4 +95,12 @@ export async function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIn
         const adjustedIdx = idx2 - removeCount + remOffset + totalAdds - k - 1;
         await onAdd(sliceB[bIdx]!, start + bIdx, adjustedIdx);
     }
+}
+
+export function lcsDiff<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): void {
+    void lcsDiffInternal(a, b, onKeep, onAdd, onRemove);
+}
+
+export async function lcsDiffAsync<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => Promise<unknown>, onAdd: (item: T, aIndex: number, bIndex: number) => Promise<unknown>, onRemove: (item: T, aIndex: number, idx: number) => Promise<unknown>): Promise<void> {
+    await lcsDiffInternal(a, b, onKeep, onAdd, onRemove);
 }
