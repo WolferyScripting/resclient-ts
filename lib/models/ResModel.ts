@@ -3,6 +3,7 @@ import type CacheItem from "./CacheItem.js";
 import { copy, equal, update, type PropertyDefinition } from "../includes/utils/obj.js";
 import Properties from "../util/Properties.js";
 import type { AnyFunction, AnyObject } from "../util/types.js";
+import UpdateError from "../util/UpdateError.js";
 
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
@@ -126,51 +127,55 @@ export default class ResModel {
         }
 
         let changed: AnyObject | null = null, v: unknown, promote: boolean;
-        const p = this._props;
 
+        try {
+            const p = this._props;
 
-        if (reset) {
-            props = { ...props };
-            for (const k in p) {
-                if (!Object.hasOwn(props, k)) {
-                    props[k] = undefined;
-                }
-            }
-        }
-
-        if (this._definition) {
-            changed = update(p, props, this._definition);
-            for (const key in changed) {
-                if ((Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false) {
-                    v = p[key];
-                    if (v === undefined) {
-                        delete (this as AnyObject)[key];
-                    } else {
-                        (this as AnyObject)[key] = v;
+            if (reset) {
+                props = { ...props };
+                for (const k in p) {
+                    if (!Object.hasOwn(props, k)) {
+                        props[k] = undefined;
                     }
                 }
             }
-        } else {
-            // eslint-disable-next-line guard-for-in
-            for (const key in props) {
-                v = props[key];
-                promote = (Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false && this._shouldPromoteKey(key, v);
-                if (!equal(p[key], v)) {
-                    changed ||= {};
-                    changed[key] = p[key];
-                    if (v === undefined) {
-                        delete p[key];
-                        if (promote) {
+
+            if (this._definition) {
+                changed = update(p, props, this._definition);
+                for (const key in changed) {
+                    if ((Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false) {
+                        v = p[key];
+                        if (v === undefined) {
                             delete (this as AnyObject)[key];
-                        }
-                    } else {
-                        p[key] = v;
-                        if (promote) {
+                        } else {
                             (this as AnyObject)[key] = v;
                         }
                     }
                 }
+            } else {
+            // eslint-disable-next-line guard-for-in
+                for (const key in props) {
+                    v = props[key];
+                    promote = (Object.hasOwn(this, key) || !(this as AnyObject)[key]) && key[0] !== "_" && Object.getOwnPropertyDescriptor(this, key)?.writable !== false && this._shouldPromoteKey(key, v);
+                    if (!equal(p[key], v)) {
+                        changed ||= {};
+                        changed[key] = p[key];
+                        if (v === undefined) {
+                            delete p[key];
+                            if (promote) {
+                                delete (this as AnyObject)[key];
+                            }
+                        } else {
+                            p[key] = v;
+                            if (promote) {
+                                (this as AnyObject)[key] = v;
+                            }
+                        }
+                    }
+                }
             }
+        } catch (error) {
+            throw new UpdateError(this.rid, error as Error);
         }
 
         return changed;
