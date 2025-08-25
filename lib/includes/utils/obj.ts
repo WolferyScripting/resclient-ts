@@ -5,6 +5,7 @@ import type { AnyClass, AnyObject } from "../../util/types.js";
 import type ResCollection from "../../models/ResCollection.js";
 import ResError from "../../models/ResError.js";
 import { DefinitionAssertionError, InvalidPropertyValueError } from "../../util/errors.js";
+import ResRef from "../../models/ResRef.js";
 
 export function equal(a: unknown, b: unknown): boolean {
     // Check if a is a non-object
@@ -467,6 +468,19 @@ export function collectionProperty(property: string, model: AnyClass<ResCollecti
             if (error && value instanceof ResError) return;
             if (value instanceof model) return;
             throw new InvalidPropertyValueError(property, `instance of ${model.name}`, value);
+        }
+    };
+}
+
+export function refProperty(property: string, optional = false, error = false): PropertyDefinition {
+    return {
+        property,
+        type: optional ? "?object" : "object",
+        assert(value: unknown): void {
+            if (optional && value === null) return;
+            if (error && value instanceof ResError) return;
+            if (value instanceof ResRef) return;
+            throw new InvalidPropertyValueError(property, "instance of ResRef", value);
         }
     };
 }
