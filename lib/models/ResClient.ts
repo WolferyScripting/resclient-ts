@@ -9,13 +9,9 @@ import {
     ACTION_DELETE,
     COLLECTION_TYPE,
     ERROR_TYPE,
-    LEGACY_PROTOCOL,
     MODEL_TYPE,
     States,
-    SUPPORTED_PROTOCOL,
     RESOURCE_TYPES,
-    versionToInt,
-    CURRENT_PROTOCOL,
     RECONNECT_DELAY,
     SUBSCRIBE_STALE_DELAY,
     ErrorCodes
@@ -38,6 +34,7 @@ import { Debug } from "../util/Debug.js";
 import ensurePromiseReturn from "../util/ensurePromiseReturn.js";
 import Properties from "../util/Properties.js";
 import { lcsDiffAsync } from "../util/util.js";
+import ProtocolHelper from "../util/ProtocolHelper.js";
 import WebSocket, { type MessageEvent } from "ws";
 import assert from "node:assert";
 
@@ -51,6 +48,7 @@ export interface ClientOptions {
     namespace?: string;
     onConnect?: OnConnectFunction;
     onConnectError?: OnConnectErrorFunction;
+    protocol?: string;
     retryOnTooActive?: boolean;
 }
 
@@ -99,7 +97,7 @@ export default class ResClient {
     namespace = "resclient";
     onConnect: OnConnectFunction | null = null;
     onConnectError: OnConnectErrorFunction | null = null;
-    protocol!: number;
+    protocol!: ProtocolHelper;
     requestID = 1;
     requests: Record<number, Request> = {};
     retryOnTooActive = false;
@@ -170,10 +168,16 @@ export default class ResClient {
         this.defaultErrorFactory = options.defaultErrorFactory ?? ((api: ResClient, rid: string): ResError => new ResError(api, rid));
         this.defaultModelFactory = options.defaultModelFactory ?? ((api: ResClient, rid: string): ResModel => new ResModel(api, rid));
         this.wsFactory = typeof hostUrlOrFactory === "string" ? (): WebSocket => new WebSocket(hostUrlOrFactory) : hostUrlOrFactory;
+        this.protocol = new ProtocolHelper();
+        if (options.protocol) this.protocol.setClient(options.protocol);
+
+        if (!this.protocol.clientSupported) {
+            throw new Error(`Unsupported client protocol version: ${this.protocol.client}`);
+        }
 
         Properties.of(this)
-            .readOnlyBulk("cache", "eventBus", "onClose", "onError", "onMessage", "onOpen", "requests", "types", "unsubscribe", "wsFactory")
-            .writableBulk("connectCallback", "connected", "connectPromise", "namespace", "onConnect", "onConnectError", "protocol", "requestID", "stale", "tryConnect", "ws");
+            .readOnlyBulk("cache", "eventBus", "onClose", "onError", "onMessage", "onOpen", "requests", "types", "unsubscribe", "wsFactory", "protocol")
+            .writableBulk("connectCallback", "connected", "connectPromise", "namespace", "onConnect", "onConnectError", "requestID", "stale", "tryConnect", "ws");
     }
 
     private _addStale(rid: string): void {
@@ -614,20 +618,14 @@ export default class ResClient {
     private async _onOpen(e: unknown): Promise<void> {
         Debug("ws", "ResClient open");
         let onConnectError: unknown = null;
-        await this._sendNow<{ protocol: string; }>("version", { protocol: this.supportedProtocol })
-            .then(ver=> {
-                this.protocol = versionToInt(ver.protocol) || LEGACY_PROTOCOL;
-            })
-            .catch((err: ResError) => {
-                // Invalid error means the gateway doesn't support
-                // version requests. Default to legacy protocol.
-                if (err.code && err.code === ErrorCodes.INVALID_REQUEST) {
-                    this.protocol = LEGACY_PROTOCOL;
-                    return;
-                }
-                throw err;
+        await this._sendNow<{ protocol: string; }>("version", { protocol: this.protocol.client })
+            .then(ver => {
+                if (ver.protocol) this.protocol.setServer(ver.protocol);
             })
             .then(async() => {
+                if (!this.protocol.serverSupported) {
+                    throw new Error(`Unsupported server protocol version: ${this.protocol.server}`);
+                }
                 if (this.onConnect) {
                     this.connected = true;
                     await ensurePromiseReturn(this.onConnect, null, this)
@@ -963,17 +961,13 @@ export default class ResClient {
         await this._subscribeReferred(ci);
 
         let i = ci.subscribed;
-        if (this.protocol < CURRENT_PROTOCOL) {
+        if (this.protocol.unsubscribeCountSupported) {
+            this._sendUnsubscribe(ci, i);
+        } else {
             while (i--) {
                 this._sendUnsubscribe(ci, 1);
             }
-        } else {
-            this._sendUnsubscribe(ci, i);
         }
-    }
-
-    get supportedProtocol(): string {
-        return SUPPORTED_PROTOCOL;
     }
 
     authenticate<T = unknown>(rid: string, method: string, params: unknown): Promise<T> {

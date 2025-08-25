@@ -13,6 +13,8 @@ export type * from "./util/types.js";
 export * from "./Constants.js";
 export { default as eventBus, EventBus } from "./includes/eventbus/index.js";
 export { default as ModelToCollection } from "./includes/resource/ModelToCollection.js";
+export { default as ProtocolHelper, versionToInt } from "./util/ProtocolHelper.js";
+export { default as Properties } from "./util/Properties.js";
 export * from "./includes/utils/obj.js";
 export * from "./includes/utils/array.js";
 export * from "./util/errors.js";

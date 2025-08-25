@@ -1,19 +1,3 @@
-export function versionToInt(version: string): number {
-    if (!version) {
-        return 0;
-    }
-    const p = version.split(".");
-    let v = 0;
-    for (let i = 0; i < 3; i++) {
-        v = v * 1000 + Number(p[i]);
-    }
-    return v;
-}
-
-export const SUPPORTED_PROTOCOL = "1.2.1";
-export const LEGACY_PROTOCOL = versionToInt("1.1.1");
-export const CURRENT_PROTOCOL = versionToInt("1.2.1");
-
 export const CACHE_ITEM_UNSUBSCRIBE_DELAY = 5000;
 export const ACTION_DELETE = {
     action: "delete"
