@@ -71,7 +71,6 @@ export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents ex
             this.update(data);
         }
 
-        await this._listen(true);
         return this;
     }
 

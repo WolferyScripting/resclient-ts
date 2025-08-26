@@ -3,17 +3,17 @@ import type ResModel from "../models/ResModel.js";
 import type ResCollectionModel from "../models/ResCollectionModel.js";
 import type ResRef from "../models/ResRef.js";
 
-export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionModel<T>, changes: Record<string, T | undefined>): Record<"added" | "removed", Array<T>> {
-    const added: Array<string> = [], removed: Array<T> = [];
+export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionModel<T>, changes: Record<string, T | undefined>): Record<"added" | "removed", Array<{ item: T; key: string; }>> {
+    const added: Array<string> = [], removed: Array<{ item: T; key: string; }> = [];
 
     for (const [key, value] of Object.entries(changes)) {
         if (value === undefined) {
             added.push(key);
         } else {
-            removed.push(value);
+            removed.push({ item: value, key });
         }
     }
-    return { added: added.map(key => model.props[key] as T), removed };
+    return { added: added.map(key => ({ item: model.props[key] as T, key })), removed };
 }
 
 async function lcsDiffInternal<T>(a: Array<T>, b: Array<T>, onKeep: (item: T, aIndex: number, bIndex: number, idx: number) => unknown, onAdd: (item: T, aIndex: number, bIndex: number) => unknown, onRemove: (item: T, aIndex: number, idx: number) => unknown): Promise<void> {

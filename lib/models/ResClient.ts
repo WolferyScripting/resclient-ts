@@ -197,11 +197,9 @@ export default class ResClient {
         // eslint-disable-next-line unicorn/no-array-for-each
         RESOURCE_TYPES.forEach(t => (sync[t] = this._createItems(rr(t), this.types[t])! as never));
         // must be initialized in specific order
-        for (const type of RESOURCE_TYPES) {
-            await this._initItems(rr(type), this.types[type]);
-        }
-        // eslint-disable-next-line unicorn/no-array-for-each
-        RESOURCE_TYPES.forEach(t => this._syncItems(sync[t], this.types[t]));
+        for (const type of RESOURCE_TYPES) await this._initItems(rr(type), this.types[type]);
+        for (const type of RESOURCE_TYPES) await this._listenItems(rr(type));
+        for (const type of RESOURCE_TYPES) await this._syncItems(sync[type], this.types[type]);
 
     }
 
@@ -516,6 +514,20 @@ export default class ResClient {
             const cacheItem = this.cache[rid];
             assert(cacheItem, `Missing CacheItem (rid: ${rid})`);
             promises.push(cacheItem.item.init(type.prepareData(refs[rid] as never) as never));
+        }
+        await Promise.all(promises);
+    }
+
+    private async _listenItems(refs: Refs): Promise<void> {
+        if (!refs) {
+            return;
+        }
+
+        const promises: Array<Promise<void>> = [];
+        for (const rid of Object.keys(refs)) {
+            const cacheItem = this.cache[rid];
+            assert(cacheItem, `Missing CacheItem (rid: ${rid})`);
+            promises.push((cacheItem.item as unknown as { _listen(on: boolean): Promise<void>; })._listen(true));
         }
         await Promise.all(promises);
     }

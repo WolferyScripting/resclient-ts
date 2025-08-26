@@ -22,8 +22,13 @@ export default class ResError extends Error {
             .define("rid", false, true, true, rid);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    protected async _listen(on: boolean): Promise<void> {
+        // empty
+    }
+
     async dispose(): Promise<void> {
-        // noop
+        await this._listen(false);
     }
 
     async init(err: Partial<ErrorData> & { data?: unknown; }): Promise<this> {

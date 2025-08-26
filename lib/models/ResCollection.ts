@@ -180,7 +180,6 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
                 this._map[id] = v;
             }
         }
-        await this._listen(true);
 
         return this;
     }
