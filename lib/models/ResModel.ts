@@ -5,10 +5,13 @@ import Properties from "../util/Properties.js";
 import type { AnyFunction, AnyObject } from "../util/types.js";
 import { UpdateError } from "../util/errors.js";
 
+export interface ResModelResourceEvents<T extends AnyObject= AnyObject> {
+    change: [data: Partial<T>];
+}
 export interface ResModelOptions {
     definition?: Record<string, PropertyDefinition>;
 }
-export default class ResModel<P extends AnyObject = AnyObject> {
+export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResModelResourceEvents<P>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = Record<string, Array<unknown>>> {
     protected _definition?: Record<string, PropertyDefinition>;
     protected _props!: P;
     protected api!: ResClient;
@@ -77,21 +80,29 @@ export default class ResModel<P extends AnyObject = AnyObject> {
         this.cacheItem.keep();
     }
 
+    off<K extends keyof ModelEvents>(event: K, handler: (...args: ModelEvents[K]) => void): this;
+    off(events: string | Array<string> | null, handler: AnyFunction): this;
     off(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.eventBus.off(this, events, handler);
         return this;
     }
 
+    on<K extends keyof ModelEvents>(event: K, handler: (...args: ModelEvents[K]) => void): this;
+    on(events: string | Array<string> | null, handler: AnyFunction): this;
     on(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.eventBus.on(this, events, handler);
         return this;
     }
 
+    resourceOff<K extends keyof ResourceEvents>(event: K, handler: (...args: ResourceEvents[K]) => void): this;
+    resourceOff(events: string | Array<string> | null, handler: AnyFunction): this;
     resourceOff(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOff(this.rid, events, handler);
         return this;
     }
 
+    resourceOn<K extends keyof ResourceEvents>(event: K, handler: (...args: ResourceEvents[K]) => void): this;
+    resourceOn(events: string | Array<string> | null, handler: AnyFunction): this;
     resourceOn(events: string | Array<string> | null, handler: AnyFunction): this {
         this.api.resourceOn(this.rid, events, handler);
         return this;

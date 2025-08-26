@@ -1,12 +1,17 @@
 import type ResClient from "./ResClient.js";
-import ResModel, { type ResModelOptions } from "./ResModel.js";
+import ResModel, { type ResModelResourceEvents, type ResModelOptions } from "./ResModel.js";
 import type ResRef from "./ResRef.js";
 import { changeDiff } from "../util/util.js";
 import Properties from "../util/Properties.js";
 import type { AnyClass } from "../util/types.js";
 
+export interface ResCollectionModelEvents<T extends ResModel | ResRef> {
+    add: [data: CollectionModelAddRemove<T>];
+    remove: [data: CollectionModelAddRemove<T>];
+}
+export interface CollectionModelAddRemove<T extends ResModel | ResRef> { item: T; key: string; }
 export type ModelTypeUnion<T> = T extends ResModel | ResRef ? AnyClass<T> : never;
-export default class ResCollectionModel<T extends ResModel | ResRef = ResModel | ResRef> extends ResModel<Record<string, T>> {
+export default class ResCollectionModel<T extends ResModel | ResRef = ResModel | ResRef, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResModelResourceEvents<Record<string, T>>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = ResCollectionModelEvents<T>> extends ResModel<Record<string, T>, ResourceEvents, ModelEvents> {
     private onChange = this._onChange.bind(this);
     protected _list!: Array<T>;
     protected _modelTypes!: Array<ModelTypeUnion<T>>;
@@ -20,15 +25,15 @@ export default class ResCollectionModel<T extends ResModel | ResRef = ResModel |
     private _onChange(data: Record<string, T | undefined>): void {
         const { added, removed } = changeDiff(this, data);
 
-        for (const item of added) {
-            this._list.push(item);
-            this.api.eventBus.emit(this, "add", item);
+        for (const add of added) {
+            this._list.push(add.item);
+            this.api.eventBus.emit(this, "add", add);
         }
 
-        for (const item of removed) {
-            const index = this._list.indexOf(item);
+        for (const remove of removed) {
+            const index = this._list.indexOf(remove.item);
             if (index !== -1) this._list.splice(index, 1);
-            this.api.eventBus.emit(this, "remove", item);
+            this.api.eventBus.emit(this, "remove", remove);
         }
     }
 
