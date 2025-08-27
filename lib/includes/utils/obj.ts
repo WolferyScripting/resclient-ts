@@ -354,7 +354,7 @@ export interface DefinitionTypeMap {
  * @param strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is true.
  * @returns Key/value object where the key is the updated properties and the value is the old values.
  */
-export function update(target: object, source: object, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = true): AnyObject | null {
+export function update<P extends object, T extends object>(target: T, source: Partial<P>, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = true): Partial<P> | null {
     if (!def || typeof def !== "object") {
         throw new Error("Invalid definition");
     }
@@ -382,7 +382,7 @@ export function update(target: object, source: object, def: Record<string, Prope
         if (!Object.hasOwn(target, tkey)) {
             updated = true;
             updateObj[tkey] = undefined;
-            (target as Record<string, unknown>)[tkey] = (Object.hasOwn(d, "default") && d.default ? d.default : t.default()) as never;
+            target[tkey as never] = (Object.hasOwn(d, "default") && d.default ? d.default : t.default()) as never;
         }
 
         // Check if source has value for the property. If not, continue to next property.
@@ -415,10 +415,10 @@ export function update(target: object, source: object, def: Record<string, Prope
             }
 
             // Check if the property value differs and set it as updated
-            if ((target as Record<string, unknown>)[tkey] !== v) {
+            if (target[tkey as never] !== v) {
                 updated = true;
-                updateObj[tkey] = (target as Record<string, unknown>)[tkey];
-                (target as Record<string, unknown>)[tkey] = v as never;
+                updateObj[tkey] = target[tkey as never];
+                target[tkey as never] = v as never;
             }
         } catch (ex) {
             if (strict) {
@@ -431,7 +431,7 @@ export function update(target: object, source: object, def: Record<string, Prope
         return null;
     }
 
-    return updateObj;
+    return updateObj as Partial<P>;
 }
 
 /**

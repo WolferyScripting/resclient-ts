@@ -19,9 +19,21 @@ function getDebug(): Promise<DebugType | null> | DebugType | null {
     return debug;
 }
 
+let maxTotalLength = 2000;
+let maxLines = 30;
+function formatMaxLength(args: Array<unknown>, d = depth): string {
+    const formatted = formatWithOptions({ colors: true, showHidden: false, depth: d }, ...args);
+    if (d === Infinity) return formatted;
+    if (formatted.length > maxTotalLength || formatted.split("\n").length > maxLines) {
+        d -= 1;
+        if (d >= 0) return formatMaxLength(args, d);
+    }
+    return formatted;
+}
+
 let depth = 2;
 export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>): void {
-    const log = (dt: DebugType): void => dt(`wolferyjs:${namspace}`)(formatWithOptions({ colors: true, showHidden: false, depth }, arg0, ...args));
+    const log = (dt: DebugType): void => dt(`wolferyjs:${namspace}`)(formatMaxLength([arg0, ...args]));
     const d = getDebug();
     if (d instanceof Promise) {
         void d.then(dt => {
@@ -49,4 +61,20 @@ export function createDebug(namespace: string): (formatter: any, ...args: Array<
  */
 export function setDebugDepth(d: number): void {
     depth = d;
+}
+
+/**
+ * Set the maximum total length for debug messages.
+ * @param d The maximum total length.
+ */
+export function setDebugMaxTotalLength(d: number): void {
+    maxTotalLength = d;
+}
+
+/**
+ * Set the maximum number of lines for debug messages.
+ * @param d The maximum number of lines.
+ */
+export function setDebugMaxLines(d: number): void {
+    maxLines = d;
 }

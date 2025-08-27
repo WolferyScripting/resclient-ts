@@ -16,8 +16,8 @@ export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents ex
     protected _props!: P;
     protected api!: ResClient;
     rid!: string;
-    constructor(api: ResClient, rid: string, options?: ResModelOptions) {
-        update(this, options ?? {}, {
+    constructor(api: ResClient, rid: string, options: ResModelOptions = {}) {
+        update<ResModelOptions, this>(this, options, {
             definition: { type: "?object", property: "_definition" }
         });
         this.p
@@ -66,7 +66,7 @@ export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents ex
         return this.api;
     }
 
-    async init(data?: AnyObject): Promise<this> {
+    async init(data?: P): Promise<this> {
         if (data) {
             this.update(data);
         }
@@ -131,15 +131,15 @@ export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents ex
         this.cacheItem.unkeep();
     }
 
-    update(props: AnyObject, reset = false): AnyObject | null {
+    update(props: Partial<P>, reset = false): Partial<P> | null {
         if (!props) {
             return null;
         }
 
-        let changed: AnyObject | null = null, v: unknown, promote: boolean;
+        let changed: Partial<P> | null = null, v: unknown, promote: boolean;
 
         try {
-            const p = this._props as AnyObject;
+            const p = this._props;
 
             if (reset) {
                 props = { ...props };
@@ -176,7 +176,7 @@ export default class ResModel<P extends AnyObject = AnyObject, ResourceEvents ex
                                 delete (this as AnyObject)[key];
                             }
                         } else {
-                            p[key] = v;
+                            p[key] = v as never;
                             if (promote) {
                                 (this as AnyObject)[key] = v;
                             }

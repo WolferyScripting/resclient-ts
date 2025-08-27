@@ -19,4 +19,4 @@ export * from "./includes/utils/obj.js";
 export * from "./includes/utils/array.js";
 export * from "./util/errors.js";
 export * from "./util/util.js";
-export { setDebugDepth } from "./util/Debug.js";
+export { setDebugDepth, setDebugMaxTotalLength, setDebugMaxLines } from "./util/Debug.js";

@@ -85,7 +85,7 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
         return this.api.authenticate<T>(this.rid, method, params);
     }
 
-    call<T = unknown>(method: string, params: unknown): Promise<T> {
+    call<T = unknown>(method: string, params?: unknown): Promise<T> {
         return this.api.call<T>(this.rid, method, params);
     }
 
@@ -125,7 +125,7 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
      * Get the first element, or first X elements if a number is provided.
      * @param amount The amount of elements to get.
      */
-    first(): V | undefined;
+    first(amount?: undefined): V | undefined;
     first(amount: number): Array<V>;
     first(amount?: number): V | Array<V> | undefined {
         if (amount === undefined) {
@@ -160,6 +160,15 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
         return item;
     }
 
+    has(item: V): boolean {
+        return this._list.includes(item);
+    }
+
+    hasKey(key: string | number): boolean {
+        this._hasID();
+        return key in this._map!;
+    }
+
     indexOf(item: V): number {
         return this._list.indexOf(item);
     }
@@ -188,7 +197,7 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
      * Get the last element, or last X elements if a number is provided.
      * @param amount The amount of elements to get.
      */
-    last(): V | undefined;
+    last(amount?: undefined): V | undefined;
     last(amount: number): Array<V>;
     last(amount?: number): V | Array<V> | undefined {
         const iterator = Array.from(this._list);
