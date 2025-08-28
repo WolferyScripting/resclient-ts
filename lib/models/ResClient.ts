@@ -90,9 +90,9 @@ export default class ResClient {
     connectCallback: { reject(err: ErrorData): void; resolve(): void; } | null = null;
     connectPromise: Promise<void> | null = null;
     connected = false;
-    defaultCollectionFactory: ItemFactory<ResCollection>;
-    defaultErrorFactory: ItemFactory<ResError>;
-    defaultModelFactory: ItemFactory<ResModel>;
+    defaultCollectionFactory!: ItemFactory<ResCollection>;
+    defaultErrorFactory!: ItemFactory<ResError>;
+    defaultModelFactory!: ItemFactory<ResModel>;
     eventBus = eventBus;
     namespace = "resclient";
     onConnect: OnConnectFunction | null = null;
@@ -141,7 +141,7 @@ export default class ResClient {
         } satisfies ResType<typeof MODEL_TYPE, ResModel, AnyObject> as ResType<typeof MODEL_TYPE, ResModel, AnyObject>
     };
     ws: WebSocket | null = null;
-    wsFactory: (() => WebSocket);
+    wsFactory!: (() => WebSocket);
     constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions = {}) {
         this.eventBus = options.eventBus || this.eventBus;
         if (options.eventBus !== undefined) {
@@ -1024,12 +1024,17 @@ export default class ResClient {
 
     async disconnect(): Promise<void> {
         this.tryConnect = false;
+        const err = { code: ErrorCodes.DISCONNECT, message: "Disconnect called" };
+        const resErr = new ResError(this, "disconnect", undefined, err);
 
+        const req = Object.values(this.requests);
+        if (req.length !== 0) {
+            for (const r of req) r.reject(resErr);
+        }
         if (this.ws) {
             const ws = this.ws;
-            const err = { code: ErrorCodes.DISCONNECT, message: "Disconnect called" };
             ws.removeEventListener("close", this.onClose);
-            await this.onClose(err);
+            await this.onClose(resErr);
             ws.close();
             this._connectReject(err);
         }
