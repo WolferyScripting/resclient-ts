@@ -1,9 +1,7 @@
 import { equal } from "../includes/utils/obj.js";
-import type ResModel from "../models/ResModel.js";
 import type ResCollectionModel from "../models/ResCollectionModel.js";
-import type ResRef from "../models/ResRef.js";
 
-export function changeDiff<T extends ResModel | ResRef>(model: ResCollectionModel<T>, changes: Record<string, T | undefined>): Record<"added" | "removed", Array<{ item: T; key: string; }>> {
+export function changeDiff<T>(model: ResCollectionModel<T>, changes: Record<string, T | undefined>): Record<"added" | "removed", Array<{ item: T; key: string; }>> {
     const added: Array<string> = [], removed: Array<{ item: T; key: string; }> = [];
 
     for (const [key, value] of Object.entries(changes)) {

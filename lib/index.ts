@@ -2,7 +2,7 @@ export { default as CacheItem } from "./models/CacheItem.js";
 export { default, default as ResClient } from "./models/ResClient.js";
 export type * from "./models/ResClient.js";
 export { default as ResCollection, type CollectionAddRemove } from "./models/ResCollection.js";
-export { default as ResCollectionModel, type ModelTypeUnion, type CollectionModelAddRemove } from "./models/ResCollectionModel.js";
+export { default as ResCollectionModel, type CollectionModelAddRemove } from "./models/ResCollectionModel.js";
 export { default as ResError } from "./models/ResError.js";
 export { default as ResModel } from "./models/ResModel.js";
 export type * from "./models/ResModel.js";
