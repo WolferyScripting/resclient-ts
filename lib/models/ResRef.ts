@@ -19,8 +19,12 @@ export default class ResRef<T extends AnyRes = AnyRes> {
         return o instanceof ResRef && o.api === this.api && o.rid === this.rid;
     }
 
-    get(): Promise<T> {
+    async  get(): Promise<T> {
         return this.api.get<T>(this.rid);
+    }
+
+    getCached(): T | null {
+        return this.api.getCached<T>(this.rid);
     }
 
     toJSON(): Record<"rid", string> {
