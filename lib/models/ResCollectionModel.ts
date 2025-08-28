@@ -79,7 +79,7 @@ export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K
         return this._list[Symbol.iterator]();
     }
 
-    add(item: V, index: number): void {
+    _add(item: V, index: number): void {
         this._list.splice(index, 0, item);
 
         if (this._idCallback) {
@@ -93,6 +93,19 @@ export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K
             }
             this._map![id] = item;
         }
+    }
+
+    _remove(index: number): V | undefined {
+        const item = this._list[index];
+        if (item !== undefined) {
+            this._list.splice(index, 1);
+
+            if (this._idCallback) {
+                delete this._map![this._idCallback(item)];
+            }
+        }
+
+        return item;
     }
 
     at(index: number): V | undefined {
@@ -237,19 +250,6 @@ export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K
     reduceRight<T>(predicate: (previousValue: T, currentValue: V, currentIndex: number, array: Array<V>) => T, initialValue: T): T;
     reduceRight<T>(predicate: (previousValue: T, currentValue: V, currentIndex: number, array: Array<V>) => T, initialValue?: T): T {
         return this.toArray().reduceRight(predicate, initialValue!);
-    }
-
-    remove(index: number): V | undefined {
-        const item = this._list[index];
-        if (item !== undefined) {
-            this._list.splice(index, 1);
-
-            if (this._idCallback) {
-                delete this._map![this._idCallback(item)];
-            }
-        }
-
-        return item;
     }
 
     /** See: {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some | Array#some } */
