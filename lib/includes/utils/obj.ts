@@ -441,7 +441,7 @@ export function update<P extends object, T extends object>(target: T, source: Pa
  * @param strict Strict flag. If true, exceptions will be thrown on errors. If false, errors will be ignored. Default is false.
  * @returns Copy of the object
  */
-export function copy<T extends AnyObject>(source: T, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = false): T {
+export function copy<T extends { [K in keyof T]: T[K] }>(source: T, def: Record<string, PropertyDefinition | keyof typeof TYPES>, strict = false): T {
     const obj = {} as T;
     update(obj, source, def, strict);
     return obj;

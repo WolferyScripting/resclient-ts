@@ -9,7 +9,7 @@ export interface ResCollectionEvents<V = unknown> {
     remove: [data: CollectionAddRemove<V>];
 }
 export interface CollectionAddRemove<V> { idx: number; item: V; }
-export default class ResCollection<V = unknown, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResCollectionEvents<V>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = Record<string, Array<unknown>>> {
+export default class ResCollection<V = unknown, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResCollectionEvents<V>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = Record<string, Array<unknown>>> implements Iterable<V> {
     private _idCallback?: (item: V) => string;
     private _list: Array<V> = [];
     private _map!: Record<string, V> | null;
@@ -193,6 +193,11 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
         return this;
     }
 
+    /** Prevent this model from being unsubscribed. */
+    keep(): void {
+        this.cacheItem.keep();
+    }
+
     /**
      * Get the last element, or last X elements if a number is provided.
      * @param amount The amount of elements to get.
@@ -304,5 +309,10 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
                 ? (v as { toJSON(): AnyObject; }).toJSON()
                 : v
         ));
+    }
+
+    /** Undo preventing this model from being unsubscribed. */
+    unkeep(): void {
+        this.cacheItem.unkeep();
     }
 }
