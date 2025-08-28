@@ -57,7 +57,7 @@ export default class CacheItem<T extends AnyRes = AnyRes> {
     addIndirect(val = 1): void {
         this.indirect += val;
         if (this.indirect < 0) {
-            throw new Error("Indirect count reached below 0");
+            throw new Error(`Indirect count reached below 0 (${this.rid})`);
         }
     }
 
@@ -80,7 +80,7 @@ export default class CacheItem<T extends AnyRes = AnyRes> {
     removeDirect(): void {
         this.direct--;
         if (this.direct < 0) {
-            throw new Error("Direct count reached below 0");
+            throw new Error(`Direct count reached below 0 (${this.rid})`);
         }
         if (this.subscribed) {
             this._checkUnsubscribe();
