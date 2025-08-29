@@ -53,9 +53,12 @@ export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K
         }
     }
 
-    protected override async _listen(on: boolean): Promise<void> {
-        const m = on ? "resourceOn" : "resourceOff";
-        this[m]("change", this.onChange);
+    protected override async _listen(on: boolean, changes = true): Promise<void> {
+        await super._listen(on);
+        if (changes) {
+            const m = on ? "resourceOn" : "resourceOff";
+            this[m]("change", this.onChange);
+        }
     }
 
     protected override _shouldPromoteKey(key: string, value: V): boolean {
