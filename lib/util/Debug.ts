@@ -33,7 +33,7 @@ function formatMaxLength(args: Array<unknown>, d = depth): string {
 
 let depth = 2;
 export function Debug(namspace: string, arg0: unknown, ...args: Array<unknown>): void {
-    const log = (dt: DebugType): void => dt(`wolferyjs:${namspace}`)(formatMaxLength([arg0, ...args]));
+    const log = (dt: DebugType): void => dt(`resclient:${namspace}`)(formatMaxLength([arg0, ...args]));
     const d = getDebug();
     if (d instanceof Promise) {
         void d.then(dt => {
