@@ -1,6 +1,6 @@
 import type ResClient from "./ResClient.js";
 import Properties from "../util/Properties.js";
-import { type AnyRes } from "../util/types.js";
+import type { AnyRes } from "../util/types.js";
 
 export default class ResRef<T extends AnyRes = AnyRes> {
     private api!: ResClient;

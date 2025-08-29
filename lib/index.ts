@@ -1,12 +1,16 @@
 export { default as CacheItem } from "./models/CacheItem.js";
 export { default, default as ResClient } from "./models/ResClient.js";
 export type * from "./models/ResClient.js";
-export { default as ResCollection, type CollectionAddRemove } from "./models/ResCollection.js";
-export { default as ResCollectionModel, type CollectionModelAddRemove } from "./models/ResCollectionModel.js";
+export { default as ResCollection } from "./models/ResCollection.js";
+export type * from "./models/ResCollection.js";
+export { default as ResCollectionModel } from "./models/ResCollectionModel.js";
+export type * from "./models/ResCollectionModel.js";
 export { default as ResError } from "./models/ResError.js";
+export type * from "./models/ResError.js";
 export { default as ResModel } from "./models/ResModel.js";
 export type * from "./models/ResModel.js";
 export { default as ResRef } from "./models/ResRef.js";
+export type * from "./models/ResRef.js";
 export { default as TypeList } from "./models/TypeList.js";
 export type * from "./models/TypeList.js";
 export type * from "./util/types.js";
