@@ -260,7 +260,7 @@ export default class ResClient {
                 delete refs[rid];
             } else {
                 const f = type.getFactory(rid);
-                ci.setItem(f(this, rid, type.prepareData(refs[rid] as never) as never), type.id);
+                ci.setItem(f(this, rid, refs[rid] as never), type.id);
             }
         }
 
