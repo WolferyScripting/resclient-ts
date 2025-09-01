@@ -106,7 +106,7 @@ export default class ResClient {
     types = {
         collection: {
             id:          COLLECTION_TYPE,
-            list:        new TypeList((api, rid) => this.defaultCollectionFactory(api, rid)),
+            list:        new TypeList((api, rid, data) => this.defaultCollectionFactory(api, rid, data)),
             prepareData: (data: Array<unknown>): Array<unknown> => data.map(item => this._prepareValue(item as never, true)),
             getFactory(rid: string): ItemFactory<ResCollection> {
                 return this.list.getFactory(rid);
@@ -115,7 +115,7 @@ export default class ResClient {
         } satisfies ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>> as ResType<typeof COLLECTION_TYPE, ResCollection, Array<unknown>>,
         error: {
             id:          ERROR_TYPE,
-            list:        new TypeList((api, rid) => this.defaultErrorFactory(api, rid)),
+            list:        new TypeList((api, rid, data) => this.defaultErrorFactory(api, rid, data)),
             prepareData: (data: unknown): unknown => data,
             getFactory(rid: string): ItemFactory<ResError> {
                 return this.list.getFactory(rid);
@@ -125,7 +125,7 @@ export default class ResClient {
         } satisfies ResType<typeof ERROR_TYPE, ResError, unknown> as ResType<typeof ERROR_TYPE, ResError, unknown>,
         model: {
             id:          MODEL_TYPE,
-            list:        new TypeList((api, rid) => this.defaultModelFactory(api, rid)),
+            list:        new TypeList((api, rid, data) => this.defaultModelFactory(api, rid, data)),
             prepareData: (data: AnyObject): AnyObject => {
                 const obj = {} as AnyObject;
                 // eslint-disable-next-line guard-for-in
@@ -260,7 +260,7 @@ export default class ResClient {
                 delete refs[rid];
             } else {
                 const f = type.getFactory(rid);
-                ci.setItem(f(this, rid), type.id);
+                ci.setItem(f(this, rid, type.prepareData(refs[rid] as never) as never), type.id);
             }
         }
 

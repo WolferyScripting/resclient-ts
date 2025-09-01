@@ -1,6 +1,6 @@
 import type ResClient from "./ResClient.js";
 
-export type ItemFactory<T> = (api: ResClient, rid: string) => T;
+export type ItemFactory<T> = (api: ResClient, rid: string, data: Record<string, unknown> | undefined) => T;
 export interface TypeListNode<T> {
     factory?: ItemFactory<T>;
     fwc?: TypeListNode<T>; // full wildcard: ">"
