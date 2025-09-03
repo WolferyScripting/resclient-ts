@@ -805,7 +805,7 @@ export default class ResClient {
             };
 
             const json = JSON.stringify(req);
-            Debug("ws:send", "->", method, params);
+            Debug("ws:send", "->", req);
             this.ws!.send(json);
         });
     }
