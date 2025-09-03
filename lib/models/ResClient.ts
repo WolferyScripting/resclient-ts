@@ -1076,10 +1076,18 @@ export default class ResClient {
         item.resetTimeout();
     }
 
-    off(handler: AnyFunction): this;
-    off(events: string | Array<string> | null, handler: AnyFunction): this;
-    off(...args: [string | Array<string> | null, AnyFunction] | [AnyFunction]): this {
-        this.eventBus.off(this, args.length === 1 ? null : args[0], args.at(-1) as AnyFunction, this.namespace);
+    off(handler?: AnyFunction): this;
+    off(events: string | Array<string> | null, handler?: AnyFunction): this;
+    off(...args: [string | Array<string> | null, AnyFunction?] | [AnyFunction?]): this {
+        if (args.length === 0 || args[0] === undefined) {
+            this.eventBus.off(this, null, undefined, this.namespace);
+        } else if (args.length === 1 && typeof args[0] === "function") {
+            this.eventBus.off(this, null, args[0], this.namespace);
+        } else if (args.length === 1) {
+            this.eventBus.off(this, args[0] as null, undefined, this.namespace);
+        } else {
+            this.eventBus.off(this, args[0] as null, args.at(-1) as AnyFunction, this.namespace);
+        }
         return this;
     }
 
@@ -1100,7 +1108,7 @@ export default class ResClient {
         return this;
     }
 
-    resourceOff(rid: string, events: string | Array<string> | null, handler: AnyFunction): void {
+    resourceOff(rid: string, events: string | Array<string> | null, handler?: AnyFunction): void {
         Debug("client:resourceOff", `${rid} ${events === null ? "all" : (Array.isArray(events) ? events.join(", ") : events)}`);
         const cacheItem = this.cache[rid];
         if (!cacheItem?.item) {

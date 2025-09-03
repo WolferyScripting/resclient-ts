@@ -224,9 +224,10 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
         return this.toArray().map(predicate, thisArg);
     }
 
-    off<K extends keyof ModelEvents>(event: K, handler: (...args: ModelEvents[K]) => void): this;
-    off(events: string | Array<string> | null, handler: AnyFunction): this;
-    off(events: string | Array<string> | null, handler: AnyFunction): this {
+    off<K extends keyof ModelEvents>(event: K, handler?: (...args: ModelEvents[K]) => void): this;
+    off(events: string | Array<string> | null, handler?: AnyFunction): this;
+    off(events: string | Array<string> | null, handler?: AnyFunction): this;
+    off(events: string | Array<string> | null, handler?: AnyFunction): this {
         this.api.eventBus.off(this, events, handler);
         return this;
     }
@@ -279,9 +280,9 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
         return item;
     }
 
-    resourceOff<K extends keyof ResourceEvents>(event: K, handler: (...args: ResourceEvents[K]) => void): this;
-    resourceOff(events: string | Array<string> | null, handler: AnyFunction): this;
-    resourceOff(events: string | Array<string> | null, handler: AnyFunction): this {
+    resourceOff<K extends keyof ResourceEvents>(event: K, handler?: (...args: ResourceEvents[K]) => void): this;
+    resourceOff(events: string | Array<string> | null, handler?: AnyFunction): this;
+    resourceOff(events: string | Array<string> | null, handler?: AnyFunction): this {
         this.api.resourceOff(this.rid, events, handler);
         return this;
     }
