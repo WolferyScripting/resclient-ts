@@ -11,7 +11,7 @@ export interface ResCollectionEvents<V = unknown> {
 export interface CollectionAddRemove<V> { idx: number; item: V; }
 export default class ResCollection<V = unknown, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResCollectionEvents<V>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = Record<string, Array<unknown>>> implements Iterable<V> {
     private _idCallback?: (item: V) => string;
-    private _list: Array<V> = [];
+    private _list!: Array<V>;
     private _map!: Record<string, V> | null;
     protected api!: ResClient;
     rid!: string;
@@ -20,9 +20,10 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
             idCallback: { type: "?function" }
         });
         this.p
-            .writableBulk(["_idCallback", options?.idCallback?.bind(this)], "_list", ["_map", options.idCallback ? {} : null])
+            .writableBulk(["_idCallback", options?.idCallback?.bind(this)], ["_map", options.idCallback ? {} : null])
             .readOnly("api", api)
-            .define("rid", false, true, true, rid);
+            .define("rid", false, true, false, rid)
+            .define("_list", false, api.enumerableLists, true, []);
     }
 
     private _hasID(): void {

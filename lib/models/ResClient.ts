@@ -44,6 +44,8 @@ export interface ClientOptions {
     defaultCollectionFactory?: ItemFactory<ResCollection>;
     defaultErrorFactory?: ItemFactory<ResError>;
     defaultModelFactory?: ItemFactory<ResModel>;
+    /** If lists (`_list`) in collections should be enumerable. */
+    enumerableLists?: boolean;
     eventBus?: EventBus;
     namespace?: string;
     onConnect?: OnConnectFunction;
@@ -93,6 +95,7 @@ export default class ResClient {
     defaultCollectionFactory!: ItemFactory<ResCollection>;
     defaultErrorFactory!: ItemFactory<ResError>;
     defaultModelFactory!: ItemFactory<ResModel>;
+    enumerableLists = false;
     eventBus = eventBus;
     namespace = "resclient";
     onConnect: OnConnectFunction | null = null;
@@ -143,26 +146,12 @@ export default class ResClient {
     ws: WebSocket | null = null;
     wsFactory!: (() => WebSocket);
     constructor(hostUrlOrFactory: string | (() => WebSocket), options: ClientOptions = {}) {
-        this.eventBus = options.eventBus || this.eventBus;
-        if (options.eventBus !== undefined) {
-            this.eventBus = options.eventBus;
-        }
-
-        if (options.namespace !== undefined) {
-            this.namespace = options.namespace;
-        }
-
-        if (options.onConnect !== undefined) {
-            this.onConnect = options.onConnect;
-        }
-
-        if (options.onConnectError !== undefined) {
-            this.onConnectError = options.onConnectError;
-        }
-
-        if (options.retryOnTooActive !== undefined) {
-            this.retryOnTooActive = options.retryOnTooActive;
-        }
+        this.eventBus = options.eventBus ?? this.eventBus;
+        if (options.namespace !== undefined) this.namespace = options.namespace;
+        if (options.onConnect !== undefined) this.onConnect = options.onConnect;
+        if (options.onConnectError !== undefined) this.onConnectError = options.onConnectError;
+        if (options.retryOnTooActive !== undefined) this.retryOnTooActive = options.retryOnTooActive;
+        if (options.enumerableLists !== undefined) this.enumerableLists = options.enumerableLists;
 
         this.defaultCollectionFactory = options.defaultCollectionFactory ?? ((api: ResClient, rid: string): ResCollection => new ResCollection(api, rid));
         this.defaultErrorFactory = options.defaultErrorFactory ?? ((api: ResClient, rid: string): ResError => new ResError(api, rid));

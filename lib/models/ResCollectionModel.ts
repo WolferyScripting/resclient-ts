@@ -14,7 +14,7 @@ export interface ResCollectionModelOptions<V = unknown> extends Omit<ResModelOpt
 }
 export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K in keyof ResourceEvents]: Array<unknown> } = ResModelResourceEvents<Record<string, V>>, ModelEvents extends { [K in keyof ModelEvents]: Array<unknown> } = ResCollectionModelEvents<V>> extends ResModel<Record<string, V>, ResourceEvents, ModelEvents> implements Iterable<V> {
     private _idCallback?: (item: V) => string;
-    private _list: Array<V> = [];
+    private _list!: Array<V>;
     private _map!: Record<string, V> | null;
     private _validateItem!: (item: V) => boolean;
     private onChange = this._onChange.bind(this);
@@ -26,7 +26,7 @@ export default class ResCollectionModel<V = unknown, ResourceEvents extends { [K
         });
         Properties.of(this)
             .writable("_idCallback", options.idCallback?.bind(this))
-            .writable("_list", [])
+            .define("_list", false, api.enumerableLists, true, [])
             .readOnly("_map", options.idCallback ? {} : null)
             .readOnly("_validateItem", validateItem)
             .readOnly("onChange");
