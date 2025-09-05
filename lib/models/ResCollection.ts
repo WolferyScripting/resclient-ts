@@ -175,7 +175,7 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
     }
 
     async init(data: Array<V> = []): Promise<this> {
-        this._list = data;
+        this._list.splice(0, this._list.length, ...data);
 
         if (this._idCallback) {
             this._map = {};

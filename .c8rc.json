@@ -7,7 +7,7 @@
     "test/**/*.ts"
   ],
   "reporter": [
-    "text",
+    "text-summary",
     "html"
   ],
   "all": true,

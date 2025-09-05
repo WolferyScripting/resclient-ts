@@ -243,7 +243,7 @@ export default class ModelToCollection {
         this._listen(true);
 
         const oldList = this._list;
-        this._list = [];
+        this._list.splice(0, this._list.length);
         this._props = {};
         this._filtered = {};
 

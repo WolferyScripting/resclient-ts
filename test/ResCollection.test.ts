@@ -2,7 +2,7 @@ import ResCollection from "../lib/models/ResCollection.js";
 import type ResClient from "../lib/models/ResClient.js";
 import { expect } from "chai";
 
-const api = null as unknown as ResClient;
+const api = { enumerableLists: false } as unknown as ResClient;
 describe("ResCollection", () => {
     let primitives: ResCollection;
     let models: ResCollection;
