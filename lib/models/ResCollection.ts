@@ -55,7 +55,7 @@ export default class ResCollection<V = unknown, ResourceEvents extends { [K in k
     }
 
     get list(): Array<V> {
-        return this._list;
+        return Array.from(this._list);
     }
 
     [Symbol.iterator](): Iterator<V, undefined> {
